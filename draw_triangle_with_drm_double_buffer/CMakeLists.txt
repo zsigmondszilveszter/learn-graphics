@@ -22,7 +22,10 @@ add_subdirectory(drm_util)
 target_link_libraries(draw_triangle_with_drm_double_buffer PUBLIC DrmUtil)
 
 add_subdirectory(geometry)
-target_link_libraries(draw_triangle_with_drm_double_buffer  PUBLIC BaseGeometry Triangle)
+target_link_libraries(draw_triangle_with_drm_double_buffer PUBLIC BaseGeometry Triangle)
 
 add_subdirectory(line_drawer)
-target_link_libraries(draw_triangle_with_drm_double_buffer   PUBLIC LineDrawer)
+target_link_libraries(draw_triangle_with_drm_double_buffer PUBLIC LineDrawer)
+
+add_subdirectory(fps_digits)
+target_link_libraries(draw_triangle_with_drm_double_buffer PUBLIC FpsDigits)

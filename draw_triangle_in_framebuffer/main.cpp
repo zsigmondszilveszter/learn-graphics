@@ -12,7 +12,7 @@
 #include <math.h>
 #include <signal.h>
 
-#define FPS_COUNTER true
+#define FPS_COUNTER false
 
 uint32_t color_blue = 0x4285f4; // google blue
 uint32_t color_green = 0x0F9D58; // google green

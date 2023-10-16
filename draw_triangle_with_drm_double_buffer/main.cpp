@@ -7,10 +7,11 @@
 #include "drm_util.h"
 #include "line_drawer.h"
 #include "base_geometry.h"
+#include "fps_digits.h"
 
 #define BUFFER_SLICE 10
 #define BUFFER_UPPER_LIMIT 1000
-#define FPS_COUNTER false
+#define FPS_COUNTER true
 
 
 uint32_t color_blue = 0x4285f4; // google blue
@@ -57,13 +58,13 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
     uint32_t worker_index = 0;
     for (int32_t y=upper_bound; y <= lower_bound; y+=BUFFER_SLICE) {
         worker_index = (worker_index >= processor_count - 1) ? 0 : worker_index + 1;
-        workers[worker_index]->addWorkBlocking({ left_bound, right_bound, y, 
-                std::min(y + BUFFER_SLICE, lower_bound), &tr, color, bg_color, buf});
+        workers[worker_index]->addTriangleWorkBlocking({ left_bound, right_bound, y, 
+                std::min(y + BUFFER_SLICE, lower_bound), color, bg_color, buf, &tr});
     }
 
     // wait til all the draws are done
     for (uint32_t i = 0; i < processor_count; i++) {
-        while(!workers[i]->isEmpty());
+        while(!workers[i]->isTriangleWorkQueueEmpty());
     }
 }
 
@@ -104,10 +105,10 @@ int main(int argc, char **argv) {
     // draw a triangle and then rotate it
     double smaller_screen_dimension = std::min(drmUtil.mdev->bufs[0].width, drmUtil.mdev->bufs[0].height);
     double trg_offset_x, trg_offset_y, trg_side;
-    trg_offset_x = 350;
-    trg_offset_y = 150;
-    trg_side = 700;
-    //trg_offset_x = trg_offset_y = trg_side = 400;
+    //trg_offset_x = 350;
+    //trg_offset_y = 150;
+    //trg_side = 700;
+    trg_offset_x = trg_offset_y = trg_side = 400;
     const double sin60 = sin(60 * M_PI / 180);
     const double cos60 = cos(60 * M_PI / 180);
     double trg_height = trg_side * sin60;
@@ -126,6 +127,8 @@ int main(int argc, char **argv) {
     int64_t prev_t = get_nanos();
     GM::Vertex center = trg.getCenter();
     int64_t counter = 0;
+    int32_t fps = 0;
+    int32_t max_digits = 0;
     drm_util::modeset_buf * buf;
     // rotate triangle
     while (keep_running) {
@@ -141,18 +144,36 @@ int main(int argc, char **argv) {
         buf = &drmUtil.mdev->bufs[drmUtil.mdev->front_buf ^ 1];
         draw_triangle(buf, new_triangle, trg, color_white);
 
+#if(FPS_COUNTER)
+        if (counter % 40 == 0) {
+            fps = 1000000000 / t_diff;
+        }
+        int32_t nr_of_digits = 0;
+        int32_t tmp = fps;
+        while (tmp) {
+            char * digit = GM::FpsDigits::getDigit(tmp % 10);
+            workers[nr_of_digits % processor_count]->addFpsWorkBlocking(
+                    { 1920 - 15 * (nr_of_digits + 1) - 3, 1920 - 15 * nr_of_digits - 3, 
+                    2, 20, 
+                    color_white, color_black, buf, digit});
+            tmp /= 10; 
+            nr_of_digits++;
+        }
+        max_digits = std::max(max_digits, nr_of_digits);
+        while (nr_of_digits < max_digits) {
+            char * digit = GM::FpsDigits::getDigit(0);
+            workers[nr_of_digits % processor_count]->addFpsWorkBlocking(
+                    { 1920 - 15 * (nr_of_digits + 1) - 3, 1920 - 15 * nr_of_digits - 3, 
+                    2, 20, 
+                    color_white, color_black, buf, digit});
+            tmp /= 10; 
+            nr_of_digits++;
+        }
+        //while(!workers[0]->isFpsWorkQueueEmpty());
+#endif
+
         // swap buffers
         drmUtil.swap_buffers();
-
-
-#if(FPS_COUNTER)
-        if (counter % 20 == 0) {
-            int32_t fps = 1000000000 / t_diff;
-            //std::clog << fps << std::endl;
-            // TODO: standard IO doesn't work in DRM device, 
-            // should create my own FPS counter in the buffer
-        }
-#endif
 
         //
         prev_t = t;
