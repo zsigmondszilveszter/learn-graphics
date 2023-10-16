@@ -5,10 +5,14 @@
 #include <thread>
 #include <semaphore>
 
-#include "triangle.h"
 #include "drm_util.h"
 
-namespace Szilv {
+namespace SG {
+
+    enum WorkType {
+        Triangle,
+        Digit
+    };
 
     typedef struct {
         int32_t left;
@@ -18,55 +22,31 @@ namespace Szilv {
         uint32_t color;
         uint32_t bg_color;
         drm_util::modeset_buf * buf;
-        GM::Triangle * tr;
-    } TriangleDrawWork;
-
-    typedef struct {
-        int32_t left;
-        int32_t right;
-        int32_t start_line;
-        int32_t end_line;
-        uint32_t color;
-        uint32_t bg_color;
-        drm_util::modeset_buf * buf;
-        char * digit;
-    } FpsDrawWork;
-
+        WorkType workType;
+        void * obj;
+    } DrawWork;
 
     class LineDrawer {
         public:
             LineDrawer(uint32_t id);
             ~LineDrawer();
 
-            virtual void addTriangleWorkBlocking(TriangleDrawWork work);
-            virtual bool addTriangleWorkNonblocking(TriangleDrawWork work);
-            virtual uint32_t getTriangleWorkQueueSize();
-            virtual bool isTriangleWorkQueueEmpty();
+            virtual void addWorkBlocking(DrawWork work);
+            virtual bool addWorkNonblocking(DrawWork work);
+            virtual uint32_t getWorkQueueSize();
+            virtual bool isWorkQueueEmpty();
 
-            virtual void addFpsWorkBlocking(FpsDrawWork work);
-            virtual bool addFpsWorkNonblocking(FpsDrawWork work);
-            virtual uint32_t getFpsWorkQueueSize();
-            virtual bool isFpsWorkQueueEmpty();
-
-            virtual void triangleWorker();
-            virtual void fpsWorker();
-
-            virtual void executeTriangleDrawWork();
-            virtual void executeFpsDigitDrawWork();
+            virtual void threadWorker();
+            virtual void executeDrawWork();
 
         private:
             uint32_t id;
             bool keep_running = true;
 
-            std::binary_semaphore triangle_work_queue_sem{1};
-            std::queue<TriangleDrawWork> triangle_work_queue;
-            std::thread triangleThd;
-            std::binary_semaphore triangle_thread_sem{0};
-
-            std::binary_semaphore fps_work_queue_sem{1};
-            std::queue<FpsDrawWork> fps_work_queue;
-            std::thread fpsThd;
-            std::binary_semaphore fps_thread_sem{0};
+            std::binary_semaphore sem_work_queue{1};
+            std::queue<DrawWork> work_queue;
+            std::thread thd;
+            std::binary_semaphore sem_thread{0};
     };
 }
 
