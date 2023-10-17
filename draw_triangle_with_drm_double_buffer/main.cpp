@@ -66,7 +66,7 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
 
     // wait til all the draws are done
     for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
-        while(!workers[i]->isWorkQueueEmpty());
+        workers[i]->blockUntilTheQueueIsNotEmpty();
     }
 }
 
@@ -78,6 +78,7 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
     if (counter % 10 == 0) {
         fps = 1000000000 / t_diff;
     }
+
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
     while (tmp) {
@@ -102,13 +103,17 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
     }
     prev_nr_of_digits = nr_of_digits;
     counter++;
-    while(!workers[0]->isWorkQueueEmpty());
+
+    // wait til all the draws are done
+    for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
+        workers[i]->blockUntilTheQueueIsNotEmpty();
+    }
 }
 #endif
 
 void sig_handler(int signo) {
   if (signo == SIGINT) {
-      std::cout << " - Received SIGINT, cleaning up." << std::endl;
+      std::cerr << " - Received SIGINT, cleaning up." << std::endl;
       keep_running = false;
   }
 }

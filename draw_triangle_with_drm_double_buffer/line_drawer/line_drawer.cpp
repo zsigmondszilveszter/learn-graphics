@@ -26,17 +26,26 @@ namespace SG {
         sem_work_queue.acquire();
         work_queue.push(work);
         sem_work_queue.release();
+
         sem_thread.release();
+        sem_main_thread.acquire();
     }
 
     bool LineDrawer::addWorkNonblocking(DrawWork work) {
         if (sem_work_queue.try_acquire()) {
             work_queue.push(work);
             sem_work_queue.release();
+
             sem_thread.release();
+            sem_main_thread.acquire();
             return true;
         }
         return false;
+    }
+
+    void LineDrawer::blockUntilTheQueueIsNotEmpty() {
+        sem_main_thread.acquire();
+        sem_main_thread.release();
     }
 
     uint32_t LineDrawer::getWorkQueueSize() {
@@ -94,6 +103,7 @@ namespace SG {
             }
         }
         sem_work_queue.release();
+        sem_main_thread.release();
     }
 
     void LineDrawer::threadWorker() {
