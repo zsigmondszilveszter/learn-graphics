@@ -3,6 +3,7 @@
 #include <time.h>
 #include <math.h>
 #include <signal.h>
+#include <execinfo.h>
 
 #include "drm_util.h"
 #include "line_drawer.h"
@@ -22,7 +23,7 @@ uint32_t color_red      = 0xDB4437; // google red
 uint32_t color_white    = 0xFFFFFF;
 uint32_t color_black    = 0x0;
 bool keep_running = true;
-const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency());
+const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency() - 1);
 std::vector<SG::LineDrawer *> workers;
 
 static int64_t get_nanos(void) {
@@ -50,72 +51,72 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
     int32_t lower_bound = (int32_t)std::max(new_lower_bound, old_lower_bound);
 
     // increase the box a little bit to surely cover the previous triangle
-    left_bound -= 30;
-    right_bound += 30;
-    upper_bound -= 30;
-    lower_bound += 30;
+    left_bound  -= 60;
+    right_bound += 60;
+    upper_bound -= 60;
+    lower_bound += 60;
 
     // check all the pixels inside the square of these bounds
-    uint32_t worker_index = 0;
+    uint32_t slice = 0;
     for (int32_t y=upper_bound; y <= lower_bound; y+=BUFFER_SLICE) {
-        worker_index = (worker_index >= nr_of_draw_workers - 1) ? 0 : worker_index + 1;
-        workers[worker_index]->addWorkBlocking({ left_bound, right_bound, y, 
+        workers[slice % nr_of_draw_workers]->addWorkBlocking({ left_bound, right_bound, y, 
                 std::min(y + BUFFER_SLICE, lower_bound), color, bg_color, buf, 
                 SG::Triangle, (void*)&tr});
-    }
-
-    // wait til all the draws are done
-    for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
-        workers[i]->blockUntilTheQueueIsNotEmpty();
+        slice++;
     }
 }
 
 #if(FPS_COUNTER)
 uint32_t fps = 0;
-uint32_t prev_nr_of_digits = 0;
-uint64_t counter = 0;
+uint32_t max_nr_of_digits = 0;
+uint64_t counter = 2;
 void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
     if (counter % 10 == 0) {
         fps = 1000000000 / t_diff;
     }
-
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
     while (tmp) {
         char * digit = GM::FpsDigits::getDigit(tmp % 10);
+        int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
-                { 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits, 
-                1920 - 15 * (int32_t)nr_of_digits - 3 * (int32_t)nr_of_digits, 
+                { left, left + 15,
                 2, 20, 
                 color_blue, color_black, buf, SG::Digit, (void*)digit});
         tmp /= 10; 
         nr_of_digits++;
     }
-    while (nr_of_digits < prev_nr_of_digits) {
-        char * digit = (char *)GM::FpsDigits::blank;
+    max_nr_of_digits = std::max(max_nr_of_digits, nr_of_digits);
+    while (nr_of_digits < max_nr_of_digits) {
+        char * digit = (char*)GM::FpsDigits::blank;
+        int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
-                { 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits, 
-                1920 - 15 * (int32_t)nr_of_digits - 3 * (int32_t)nr_of_digits, 
+                { left, left + 15,
                 2, 20, 
                 color_blue, color_black, buf, SG::Digit, (void*)digit});
-        tmp /= 10; 
         nr_of_digits++;
     }
-    prev_nr_of_digits = nr_of_digits;
-    counter++;
 
-    // wait til all the draws are done
-    for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
-        workers[i]->blockUntilTheQueueIsNotEmpty();
-    }
+    counter++;
 }
 #endif
 
 void sig_handler(int signo) {
-  if (signo == SIGINT) {
-      std::cerr << " - Received SIGINT, cleaning up." << std::endl;
-      keep_running = false;
-  }
+    if (signo == SIGINT) {
+        std::cerr << " - Received SIGINT, cleaning up." << std::endl;
+        keep_running = false;
+
+        void *array[10];
+        size_t size;
+
+        // get void*'s for all entries on the stack
+        size = backtrace(array, 10);
+
+        // print out all the frames to stderr
+        std::cerr << "Error: signal " << signo << std::endl;
+        backtrace_symbols_fd(array, size, STDERR_FILENO);
+        exit(1);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -180,6 +181,11 @@ int main(int argc, char **argv) {
 #if(FPS_COUNTER)
         fps_counter(buf, t_diff);
 #endif
+
+        // wait til all the draws are done
+        for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
+            workers[i]->blockMainThreadUntilTheQueueIsNotEmpty();
+        }
 
         // swap buffers
         drmUtil.swap_buffers();

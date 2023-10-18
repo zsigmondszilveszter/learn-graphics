@@ -7,6 +7,8 @@ add_executable(draw_triangle_with_drm_double_buffer
     main.cpp
     )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
+
 #
 add_library(draw_triangle_with_drm_double_buffer_compiler_flags INTERFACE)
 target_compile_features(draw_triangle_with_drm_double_buffer_compiler_flags INTERFACE cxx_std_20)

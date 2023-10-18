@@ -17,7 +17,7 @@ namespace GM {
                     case 7: return (char*)seven;
                     case 8: return (char*)eight;
                     case 9: return (char*)nine;
-                    default: return (char*)zero;
+                    default: return (char*)blank;
                 }
             }
             static constexpr char zero[18][15] = {

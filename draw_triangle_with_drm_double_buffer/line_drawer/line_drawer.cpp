@@ -15,7 +15,8 @@ namespace SG {
         this->keep_running = false;
 
         sem_work_queue.release();
-        sem_thread.release();
+        sem_block_this_thread.release();
+        sem_block_main_thread.release();
 
         this->thd.join();
 
@@ -27,8 +28,10 @@ namespace SG {
         work_queue.push(work);
         sem_work_queue.release();
 
-        sem_thread.release();
-        sem_main_thread.acquire();
+        // unblock this thread
+        sem_block_this_thread.release();
+        // block main thread to access this thread's resources
+        sem_block_main_thread.acquire();
     }
 
     bool LineDrawer::addWorkNonblocking(DrawWork work) {
@@ -36,16 +39,16 @@ namespace SG {
             work_queue.push(work);
             sem_work_queue.release();
 
-            sem_thread.release();
-            sem_main_thread.acquire();
+            sem_block_this_thread.release();
+            sem_block_main_thread.acquire();
             return true;
         }
         return false;
     }
 
-    void LineDrawer::blockUntilTheQueueIsNotEmpty() {
-        sem_main_thread.acquire();
-        sem_main_thread.release();
+    void LineDrawer::blockMainThreadUntilTheQueueIsNotEmpty() {
+        sem_block_main_thread.acquire();
+        sem_block_main_thread.release();
     }
 
     uint32_t LineDrawer::getWorkQueueSize() {
@@ -62,54 +65,50 @@ namespace SG {
         return empty;
     }
 
-    void LineDrawer::executeDrawWork() {
-        sem_work_queue.acquire();
-        while (!work_queue.empty()) {
-            DrawWork w = work_queue.front();
-            work_queue.pop();
-
-            int32_t buf_offset;
-            switch (w.workType) {
-                case Triangle: 
-                    {
-                        GM::Triangle * tr = (GM::Triangle *) w.obj;
-                        for (int32_t y = w.start_line; y <= w.end_line; y++) {
-                            for (int32_t x = w.left; x <= w.right; x++) {
-                                GM::Vertex point = {(double)x, (double)y, 0.0};
-                                buf_offset = y * w.buf->width + x;
-                                w.buf->map[buf_offset] = tr->pointInTriangle(point) 
-                                    ? w.color 
-                                    : w.bg_color;
-                            }
-                        }
-                    }
-                    break;
-
-                case Digit:
-                    {
-                        char * digit = (char *) w.obj;
-                        uint32_t width = w.right - w.left;
-                        uint32_t height = w.end_line - w.start_line;
-                        for (int32_t y = 0; y < height; y++) {
-                            for (int32_t x = 0; x < width; x++) {
-                                buf_offset = (w.start_line + y) * w.buf->width + (w.left + x);
-                                w.buf->map[buf_offset] = digit[y * width + x] 
-                                    ? w.color 
-                                    : w.bg_color;
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
-        sem_work_queue.release();
-        sem_main_thread.release();
-    }
-
     void LineDrawer::threadWorker() {
         while (keep_running) {
-            sem_thread.acquire();
-            executeDrawWork();
+            sem_block_this_thread.acquire();
+            sem_work_queue.acquire();
+            while (!work_queue.empty()) {
+                DrawWork w = work_queue.front();
+                work_queue.pop();
+
+                int32_t buf_offset;
+                switch (w.workType) {
+                    case Triangle: 
+                        {
+                            GM::Triangle * tr = (GM::Triangle *) w.obj;
+                            for (int32_t y = w.start_line; y <= w.end_line; y++) {
+                                for (int32_t x = w.left; x <= w.right; x++) {
+                                    GM::Vertex point = {(double)x, (double)y, 0.0};
+                                    buf_offset = y * w.buf->width + x;
+                                    w.buf->map[buf_offset] = tr->pointInTriangle(point) 
+                                        ? w.color 
+                                        : w.bg_color;
+                                }
+                            }
+                        }
+                        break;
+
+                    case Digit:
+                        {
+                            char * digit = (char *) w.obj;
+                            uint32_t width = w.right - w.left;
+                            uint32_t height = w.end_line - w.start_line;
+                            for (int32_t y = 0; y < height; y++) {
+                                for (int32_t x = 0; x < width; x++) {
+                                    buf_offset = (w.start_line + y) * w.buf->width + (w.left + x);
+                                    w.buf->map[buf_offset] = digit[y * width + x] 
+                                        ? w.color 
+                                        : w.bg_color;
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+            sem_work_queue.release();
+            sem_block_main_thread.release();
         }
     }
 }

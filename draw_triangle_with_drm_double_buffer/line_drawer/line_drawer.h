@@ -37,8 +37,7 @@ namespace SG {
             virtual bool isWorkQueueEmpty();
 
             virtual void threadWorker();
-            virtual void executeDrawWork();
-            virtual void blockUntilTheQueueIsNotEmpty();
+            virtual void blockMainThreadUntilTheQueueIsNotEmpty();
 
         private:
             uint32_t id;
@@ -47,8 +46,8 @@ namespace SG {
             std::binary_semaphore sem_work_queue{1};
             std::queue<DrawWork> work_queue;
             std::thread thd;
-            std::binary_semaphore sem_thread{0};
-            std::binary_semaphore sem_main_thread{1};
+            std::binary_semaphore sem_block_this_thread{0};
+            std::binary_semaphore sem_block_main_thread{1};
     };
 }
 
