@@ -25,6 +25,7 @@ uint32_t color_black    = 0x0;
 bool keep_running = true;
 const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency() - 1 + 1);
 std::vector<SG::LineDrawer *> workers;
+drm_util::DrmUtil * drmUtil;
 
 static int64_t get_nanos(void) {
     struct timespec ts;
@@ -99,10 +100,21 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
 }
 #endif
 
+void cleanUp() {
+    // join worker threads
+    while (workers.size()) {
+        delete workers.back(); // the destructor calls the thread join
+        workers.pop_back();
+    }
+    delete drmUtil;
+}
+
 void sig_handler(int signo) {
     if (signo == SIGINT) {
         std::cerr << " - Received SIGINT, cleaning up." << std::endl;
         keep_running = false;
+
+        cleanUp();
 
         void *array[10];
         size_t size;
@@ -131,14 +143,14 @@ int main(int argc, char **argv) {
     }
 
     // init drmUtil on card
-    drm_util::DrmUtil drmUtil(card);
+    drmUtil = new drm_util::DrmUtil(card);
     int32_t response;
-    if (response = drmUtil.initDrmDev()) {
+    if (response = drmUtil->initDrmDev()) {
         return response;
     }
 
     // draw a triangle and then rotate it
-    double smaller_screen_dimension = std::min(drmUtil.mdev->bufs[0].width, drmUtil.mdev->bufs[0].height);
+    double smaller_screen_dimension = std::min(drmUtil->mdev->bufs[0].width, drmUtil->mdev->bufs[0].height);
     double trg_offset_x, trg_offset_y, trg_side;
     //trg_offset_x = 350;
     //trg_offset_y = 150;
@@ -173,7 +185,7 @@ int main(int argc, char **argv) {
             GM::BaseGeometry::rotate(trg.getPrimitive().p3, center, angle)
         });
         //
-        buf = &drmUtil.mdev->bufs[drmUtil.mdev->front_buf ^ 1];
+        buf = &drmUtil->mdev->bufs[drmUtil->mdev->front_buf ^ 1];
         draw_triangle(buf, new_triangle, trg, color_white);
 
 #if(FPS_COUNTER)
@@ -186,17 +198,11 @@ int main(int argc, char **argv) {
         }
 
         // swap buffers
-        drmUtil.swap_buffers();
+        drmUtil->swap_buffers();
 
         //
         prev_t = t;
         trg = new_triangle;
-    }
-
-    // join worker threads
-    while (workers.size()) {
-        delete workers.back(); // the destructor calls the thread join
-        workers.pop_back();
     }
 
     return 0;
