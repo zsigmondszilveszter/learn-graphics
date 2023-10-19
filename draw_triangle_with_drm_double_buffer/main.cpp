@@ -72,9 +72,12 @@ uint32_t fps = 0;
 uint32_t max_nr_of_digits = 0;
 uint64_t counter = 2;
 void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
-    if (counter % 10 == 0) {
+    if (counter % 10000 == 0) {
         fps = 1000000000 / t_diff;
+        printf("%llu : %d\n", counter, fps);
     }
+    counter++;
+    return;
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
     while (tmp) {
@@ -136,18 +139,18 @@ int main(int argc, char **argv) {
     signal(SIGINT, sig_handler);
 
 	/* check which DRM device to open */
-	if (argc > 1) {
-		card = argv[1];
-	} else {
-		card = "/dev/dri/card0";
-    }
+	//if (argc > 1) {
+	//	card = argv[1];
+	//} else {
+	//	card = "/dev/dri/card0";
+    //}
 
-    // init drmUtil on card
-    drmUtil = new drm_util::DrmUtil(card);
-    int32_t response;
-    if (response = drmUtil->initDrmDev()) {
-        return response;
-    }
+    //// init drmUtil on card
+    //drmUtil = new drm_util::DrmUtil(card);
+    //int32_t response;
+    //if (response = drmUtil->initDrmDev()) {
+    //    return response;
+    //}
 
     // draw a triangle and then rotate it
     double smaller_screen_dimension = std::min(drmUtil->mdev->bufs[0].width, drmUtil->mdev->bufs[0].height);
@@ -185,7 +188,7 @@ int main(int argc, char **argv) {
             GM::BaseGeometry::rotate(trg.getPrimitive().p3, center, angle)
         });
         //
-        buf = &drmUtil->mdev->bufs[drmUtil->mdev->front_buf ^ 1];
+        //buf = &drmUtil->mdev->bufs[drmUtil->mdev->front_buf ^ 1];
         draw_triangle(buf, new_triangle, trg, color_white);
 
 #if(FPS_COUNTER)
@@ -198,7 +201,7 @@ int main(int argc, char **argv) {
         }
 
         // swap buffers
-        drmUtil->swap_buffers();
+        //drmUtil->swap_buffers();
 
         //
         prev_t = t;
