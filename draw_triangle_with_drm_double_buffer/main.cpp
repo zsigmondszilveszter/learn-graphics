@@ -23,7 +23,7 @@ uint32_t color_red      = 0xDB4437; // google red
 uint32_t color_white    = 0xFFFFFF;
 uint32_t color_black    = 0x0;
 bool keep_running = true;
-const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency() - 1);
+const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency() - 1 + 1);
 std::vector<SG::LineDrawer *> workers;
 
 static int64_t get_nanos(void) {
@@ -35,12 +35,12 @@ static int64_t get_nanos(void) {
 void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle old_tr, uint32_t color) {
     uint32_t bg_color = color_black;
     // find a square the triangle is inside
-    double new_left_bound = std::min(std::min(tr.getPrimitive().p1.x, tr.getPrimitive().p2.x), tr.getPrimitive().p3.x);
+    double new_left_bound  = std::min(std::min(tr.getPrimitive().p1.x, tr.getPrimitive().p2.x), tr.getPrimitive().p3.x);
     double new_right_bound = std::max(std::max(tr.getPrimitive().p1.x, tr.getPrimitive().p2.x), tr.getPrimitive().p3.x);
     double new_upper_bound = std::min(std::min(tr.getPrimitive().p1.y, tr.getPrimitive().p2.y), tr.getPrimitive().p3.y);
     double new_lower_bound = std::max(std::max(tr.getPrimitive().p1.y, tr.getPrimitive().p2.y), tr.getPrimitive().p3.y);
 
-    double old_left_bound = std::min(std::min(old_tr.getPrimitive().p1.x, old_tr.getPrimitive().p2.x), old_tr.getPrimitive().p3.x);
+    double old_left_bound  = std::min(std::min(old_tr.getPrimitive().p1.x, old_tr.getPrimitive().p2.x), old_tr.getPrimitive().p3.x);
     double old_right_bound = std::max(std::max(old_tr.getPrimitive().p1.x, old_tr.getPrimitive().p2.x), old_tr.getPrimitive().p3.x);
     double old_upper_bound = std::min(std::min(old_tr.getPrimitive().p1.y, old_tr.getPrimitive().p2.y), old_tr.getPrimitive().p3.y);
     double old_lower_bound = std::max(std::max(old_tr.getPrimitive().p1.y, old_tr.getPrimitive().p2.y), old_tr.getPrimitive().p3.y);
@@ -80,8 +80,7 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
         char * digit = GM::FpsDigits::getDigit(tmp % 10);
         int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
-                { left, left + 15,
-                2, 20, 
+                { left, left + 15, 2, 20, 
                 color_blue, color_black, buf, SG::Digit, (void*)digit});
         tmp /= 10; 
         nr_of_digits++;
@@ -91,8 +90,7 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
         char * digit = (char*)GM::FpsDigits::blank;
         int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
-                { left, left + 15,
-                2, 20, 
+                { left, left + 15, 2, 20, 
                 color_blue, color_black, buf, SG::Digit, (void*)digit});
         nr_of_digits++;
     }
