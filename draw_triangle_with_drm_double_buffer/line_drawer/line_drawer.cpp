@@ -8,6 +8,11 @@ namespace SG {
 
     LineDrawer::LineDrawer(uint32_t id) {
         this->id = id;
+        // init semaphores
+        initSemaphore(sem_work_queue, 1); 
+        initSemaphore(sem_block_this_thread, 0); 
+        initSemaphore(sem_block_main_thread, 1); 
+        // start the worker thread
         this->thd = std::thread([this] { threadWorker(); } );
     }
 
@@ -15,9 +20,13 @@ namespace SG {
         std::clog << "Thread " << id << " getting destroyed" << std::endl;
         this->keep_running = false;
 
-        sem_work_queue.release();
-        sem_block_this_thread.release();
-        sem_block_main_thread.release();
+        releaseSemaphore(sem_work_queue);
+        releaseSemaphore(sem_block_this_thread);
+        releaseSemaphore(sem_block_main_thread);
+
+        destroySemaphore(sem_work_queue);
+        destroySemaphore(sem_block_this_thread); 
+        destroySemaphore(sem_block_main_thread); 
 
         this->thd.join();
 
@@ -25,53 +34,55 @@ namespace SG {
     }
 
     void LineDrawer::addWorkBlocking(DrawWork work) {
-        sem_work_queue.acquire();
+        acquireSemaphore(sem_work_queue);
 //        work_queue.push(work);
-        sem_work_queue.release();
+        releaseSemaphore(sem_work_queue);
 
         // unblock this thread
-        sem_block_this_thread.release();
+        releaseSemaphore(sem_block_this_thread);
         // block main thread to access this thread's resources
-        sem_block_main_thread.acquire();
+        acquireSemaphore(sem_block_main_thread);
     }
 
     bool LineDrawer::addWorkNonblocking(DrawWork work) {
-        if (sem_work_queue.try_acquire()) {
-            work_queue.push(work);
-            sem_work_queue.release();
+        //if (sem_work_queue.try_acquire()) {
+        //    work_queue.push(work);
+        //    sem_work_queue.release();
 
-            sem_block_this_thread.release();
-            sem_block_main_thread.acquire();
-            return true;
-        }
+        //    sem_block_this_thread.release();
+        //    sem_block_main_thread.acquire();
+        //    return true;
+        //}
         return false;
     }
 
     void LineDrawer::blockMainThreadUntilTheQueueIsNotEmpty() {
-        sem_block_main_thread.acquire();
-        sem_block_main_thread.release();
+        acquireSemaphore(sem_block_main_thread);
+        releaseSemaphore(sem_block_main_thread);
     }
 
     uint32_t LineDrawer::getWorkQueueSize() {
-        sem_work_queue.acquire();
+        //sem_work_queue.acquire();
  //       uint32_t size = work_queue.size();
-        sem_work_queue.release();
+        //sem_work_queue.release();
  //       return size;
         return 0;
     }
 
     bool LineDrawer::isWorkQueueEmpty() {
-        sem_work_queue.acquire();
+        //sem_work_queue.acquire();
         //bool empty = work_queue.empty();
-        sem_work_queue.release();
+        //sem_work_queue.release();
         //return empty;
         return true;
     }
 
     void LineDrawer::threadWorker() {
         while (keep_running) {
-            sem_block_this_thread.acquire();
-            sem_work_queue.acquire();
+            acquireSemaphore(sem_block_this_thread);
+            acquireSemaphore(sem_work_queue);
+
+
             //usleep(1);
             //while (!work_queue.empty()) {
             //    DrawWork w = work_queue.front();
@@ -111,8 +122,11 @@ namespace SG {
             //            break;
             //    }
             //}
-            sem_work_queue.release();
-            sem_block_main_thread.release();
+
+
+
+            releaseSemaphore(sem_work_queue);
+            releaseSemaphore(sem_block_main_thread);
         }
     }
 }

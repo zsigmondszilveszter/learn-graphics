@@ -133,9 +133,9 @@ void sig_handler(int signo) {
 }
 
 int main(int argc, char **argv) {
-	const char *card;
+	//const char *card;
 
-    // registar signal handler
+    // register signal handler
     signal(SIGINT, sig_handler);
 
 	/* check which DRM device to open */
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
     //}
 
     // draw a triangle and then rotate it
-    double smaller_screen_dimension = std::min(drmUtil->mdev->bufs[0].width, drmUtil->mdev->bufs[0].height);
+    //double smaller_screen_dimension = std::min(drmUtil->mdev->bufs[0].width, drmUtil->mdev->bufs[0].height);
     double trg_offset_x, trg_offset_y, trg_side;
     //trg_offset_x = 350;
     //trg_offset_y = 150;
