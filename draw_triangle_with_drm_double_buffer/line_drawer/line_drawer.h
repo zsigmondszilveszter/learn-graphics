@@ -3,7 +3,7 @@
 
 #include <queue>
 #include <thread>
-#include <semaphore>
+#include <semaphore.h>
 
 #include "drm_util.h"
 
@@ -32,7 +32,6 @@ namespace SG {
             ~LineDrawer();
 
             virtual void addWorkBlocking(DrawWork work);
-            virtual bool addWorkNonblocking(DrawWork work);
             virtual uint32_t getWorkQueueSize();
             virtual bool isWorkQueueEmpty();
 
@@ -43,11 +42,11 @@ namespace SG {
             uint32_t id;
             bool keep_running = true;
 
-            std::binary_semaphore sem_work_queue{1};
             std::queue<DrawWork> work_queue;
             std::thread thd;
-            std::binary_semaphore sem_block_this_thread{0};
-            std::binary_semaphore sem_block_main_thread{1};
+            sem_t sem_work_queue{1};
+            sem_t sem_block_this_thread{0};
+            sem_t sem_block_main_thread{1};
     };
 }
 
