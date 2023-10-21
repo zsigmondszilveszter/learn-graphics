@@ -10,3 +10,6 @@ target_link_libraries(LineDrawer PUBLIC BaseGeometry)
 target_link_libraries(LineDrawer PUBLIC Triangle)
 target_link_libraries(LineDrawer PUBLIC DrmUtil)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(LineDrawer PRIVATE Threads::Threads)
