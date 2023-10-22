@@ -79,7 +79,7 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
     uint32_t tmp = fps;
     while (tmp) {
         char * digit = GM::FpsDigits::getDigit(tmp % 10);
-        int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
+        int32_t left = buf->width - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
                 { left, left + 15,
                 2, 20, 
@@ -90,7 +90,7 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
     max_nr_of_digits = std::max(max_nr_of_digits, nr_of_digits);
     while (nr_of_digits < max_nr_of_digits) {
         char * digit = (char*)GM::FpsDigits::blank;
-        int32_t left = 1920 - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
+        int32_t left = buf->width - 15 * ((int32_t)nr_of_digits + 1) - 3 * (int32_t)nr_of_digits;
         workers[nr_of_digits % nr_of_draw_workers]->addWorkBlocking(
                 { left, left + 15,
                 2, 20, 
