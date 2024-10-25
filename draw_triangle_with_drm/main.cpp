@@ -16,6 +16,7 @@
 #define BUFFER_SLICE 10
 #define BUFFER_UPPER_LIMIT 1000
 #define FPS_COUNTER true
+#define NANO_TO_SEC_CONV 1000000000L
 
 
 uint32_t color_blue     = 0x4285f4; // google blue
@@ -33,7 +34,7 @@ drm_util::DrmUtil * drmUtil;
 static int64_t get_nanos(void) {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
-    return (int64_t)ts.tv_sec * 1000000000L + ts.tv_nsec;
+    return (int64_t)ts.tv_sec * NANO_TO_SEC_CONV + ts.tv_nsec;
 }
 
 void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle old_tr, uint32_t color) {
@@ -73,10 +74,11 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
 #if(FPS_COUNTER)
 uint32_t fps = 0;
 uint32_t max_nr_of_digits = 0;
-uint64_t counter = 2;
-void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
-    if (counter % 10 == 0) {
+uint64_t previous_fps_changed_at = 0;
+void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff, int64_t time) {
+    if (previous_fps_changed_at < time - NANO_TO_SEC_CONV) {
         fps = 1000000000 / t_diff;
+        previous_fps_changed_at = time;
     }
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
@@ -100,8 +102,6 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff) {
                 color_blue, color_black, buf, SG::Digit, (void*)digit});
         nr_of_digits++;
     }
-
-    counter++;
 }
 #endif
 
@@ -120,6 +120,7 @@ void sig_handler(int signo) {
         keep_running = false;
 
         cleanUp();
+
         exit(0);
     }
 }
@@ -184,13 +185,14 @@ int main(int argc, char **argv) {
         draw_triangle(buf, new_triangle, trg, color_white);
 
 #if(FPS_COUNTER)
-        fps_counter(buf, t_diff);
+        fps_counter(buf, t_diff, t);
 #endif
 
         // wait til all the draws are done
         for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
             workers[i]->blockMainThreadUntilTheQueueIsNotEmpty();
         }
+
 
         // swap buffers
         //drmUtil->swap_buffers();
