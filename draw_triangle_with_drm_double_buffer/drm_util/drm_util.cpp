@@ -247,6 +247,7 @@ err_destroy:
         dev->bufs[1].height = conn->modes[0].vdisplay;
         std::clog << "mode for connector " << conn->connector_id << " is " << dev->bufs[0].width 
             << "*" << dev->bufs[0].height << std::endl;
+        std::clog << "connector flag: " << dev->mode.flags << std::endl;
 
         /* find a crtc for this connector */
         ret = modeset_find_crtc(fd, res, conn, dev);

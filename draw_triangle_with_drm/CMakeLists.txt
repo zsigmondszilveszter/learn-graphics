@@ -1,15 +1,20 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 
 project(draw_triangle_with_drm
     VERSION 1.0.0)
+
+#compile commmands 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 add_executable(draw_triangle_with_drm
     main.cpp
     )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
+
 #
 add_library(draw_triangle_with_drm_compiler_flags INTERFACE)
-target_compile_features(draw_triangle_with_drm_compiler_flags INTERFACE cxx_std_20)
+target_compile_features(draw_triangle_with_drm_compiler_flags INTERFACE cxx_std_11)
 
 # include libdrm
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/")
@@ -22,7 +27,11 @@ add_subdirectory(drm_util)
 target_link_libraries(draw_triangle_with_drm PUBLIC DrmUtil)
 
 add_subdirectory(geometry)
-target_link_libraries(draw_triangle_with_drm  PUBLIC BaseGeometry Triangle)
+target_link_libraries(draw_triangle_with_drm PUBLIC BaseGeometry Triangle)
 
 add_subdirectory(line_drawer)
-target_link_libraries(draw_triangle_with_drm   PUBLIC LineDrawer)
+target_link_libraries(draw_triangle_with_drm PUBLIC LineDrawer)
+
+add_subdirectory(fps_digits)
+target_link_libraries(draw_triangle_with_drm PUBLIC FpsDigits)
+

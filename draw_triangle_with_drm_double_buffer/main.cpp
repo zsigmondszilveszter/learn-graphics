@@ -1,9 +1,11 @@
-#include <unistd.h>
+#include <cstdint>
 #include <iostream>
-#include <time.h>
-#include <math.h>
-#include <signal.h>
-#include <execinfo.h>
+#include <ctime>
+#include <cmath>
+#include <csignal>
+
+#include <unistd.h>
+#include <execinfo.h> // backtrace
 
 #include "drm_util.h"
 #include "line_drawer.h"
@@ -137,7 +139,7 @@ int main(int argc, char **argv) {
     // init drmUtil on card
     drmUtil = new drm_util::DrmUtil(card);
     int32_t response;
-    if (response = drmUtil->initDrmDev()) {
+    if ((response = drmUtil->initDrmDev())) {
         return response;
     }
 

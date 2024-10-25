@@ -67,16 +67,9 @@ namespace drm_util {
                     &iter->saved_crtc->mode);
             drmModeFreeCrtc(iter->saved_crtc);
 
-            /* unmap buffer */
-            munmap(iter->map, iter->size);
-
-            /* delete framebuffer */
-            drmModeRmFB(fd, iter->fb);
-
-            /* delete dumb buffer */
-            memset(&dreq, 0, sizeof(dreq));
-            dreq.handle = iter->handle;
-            drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+            /* destroy framebuffers */
+            modeset_destroy_fb(fd, &iter->bufs[1]);
+            modeset_destroy_fb(fd, &iter->bufs[0]);
 
             /* free allocated memory */
             free(iter);
@@ -164,7 +157,7 @@ namespace drm_util {
     /**
      *
      */
-    int32_t DrmUtil::modeset_create_fb(int32_t fd, modeset_dev *dev) {
+    int32_t DrmUtil::modeset_create_fb(int32_t fd, modeset_buf *buf) {
         struct drm_mode_create_dumb creq;
         struct drm_mode_destroy_dumb dreq;
         struct drm_mode_map_dumb mreq;
@@ -172,21 +165,21 @@ namespace drm_util {
 
         /* create dumb buffer */
         memset(&creq, 0, sizeof(creq));
-        creq.width = dev->width;
-        creq.height = dev->height;
+        creq.width = buf->width;
+        creq.height = buf->height;
         creq.bpp = 32;
         ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
         if (ret < 0) {
             std::clog << "cannot create dumb buffer (" << errno << ")" << std::endl;
             return -errno;
         }
-        dev->stride = creq.pitch;
-        dev->size = creq.size;
-        dev->handle = creq.handle;
+        buf->stride = creq.pitch;
+        buf->size = creq.size;
+        buf->handle = creq.handle;
 
         /* create framebuffer object for the dumb-buffer */
-        ret = drmModeAddFB(fd, dev->width, dev->height, 24, 32, dev->stride,
-                dev->handle, &dev->fb);
+        ret = drmModeAddFB(fd, buf->width, buf->height, 24, 32, buf->stride,
+                buf->handle, &buf->fb);
         if (ret) {
             std::clog << "cannot create framebuffer (" << errno << ")" << std::endl;
             ret = -errno;
@@ -195,7 +188,7 @@ namespace drm_util {
 
         /* prepare buffer for memory mapping */
         memset(&mreq, 0, sizeof(mreq));
-        mreq.handle = dev->handle;
+        mreq.handle = buf->handle;
         ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
         if (ret) {
             std::clog << "cannot map dumb buffer (" << errno << ")" << std::endl;
@@ -204,28 +197,29 @@ namespace drm_util {
         }
 
         /* perform actual memory mapping */
-        dev->map = (uint32_t *) mmap(0, dev->size, PROT_READ | PROT_WRITE, MAP_SHARED,
+        buf->map = (uint32_t *) mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED,
                 fd, mreq.offset);
-        if (dev->map == MAP_FAILED) {
+        if (buf->map == MAP_FAILED) {
             std::clog << "cannot mmap dumb buffer (" << errno << ")" << std::endl;
             ret = -errno;
             goto err_fb;
         }
 
         /* clear the framebuffer to 0 */
-        memset(dev->map, 0, dev->size);
+        memset(buf->map, 0, buf->size);
 
         return 0;
 
 err_fb:
-        drmModeRmFB(fd, dev->fb);
+        drmModeRmFB(fd, buf->fb);
 err_destroy:
         memset(&dreq, 0, sizeof(dreq));
-        dreq.handle = dev->handle;
+        dreq.handle = buf->handle;
         drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
         return ret;
     }
 
+    
     /**
      *
      */
@@ -247,10 +241,13 @@ err_destroy:
 
         /* copy the mode information into our device structure */
         memcpy(&dev->mode, &conn->modes[0], sizeof(dev->mode));
-        dev->width = conn->modes[0].hdisplay;
-        dev->height = conn->modes[0].vdisplay;
-        std::clog << "mode for connector " << conn->connector_id << " is " << dev->width 
-            << "*" << dev->height << std::endl;
+        dev->bufs[0].width = conn->modes[0].hdisplay;
+        dev->bufs[0].height = conn->modes[0].vdisplay;
+        dev->bufs[1].width = conn->modes[0].hdisplay;
+        dev->bufs[1].height = conn->modes[0].vdisplay;
+        std::clog << "mode for connector " << conn->connector_id << " is " << dev->bufs[0].width 
+            << "*" << dev->bufs[0].height << std::endl;
+        std::clog << "connector flag: " << dev->mode.flags << std::endl;
 
         /* find a crtc for this connector */
         ret = modeset_find_crtc(fd, res, conn, dev);
@@ -259,14 +256,40 @@ err_destroy:
             return ret;
         }
 
-        /* create a framebuffer for this CRTC */
-        ret = modeset_create_fb(fd, dev);
+        /* create a framebuffer #1 for this CRTC */
+        ret = modeset_create_fb(fd, &dev->bufs[0]);
         if (ret) {
             std::clog << "cannot create framebuffer for connector " << conn->connector_id << std::endl;
             return ret;
         }
 
+        /* create a framebuffer #2 for this CRTC */
+        ret = modeset_create_fb(fd, &dev->bufs[1]);
+        if (ret) {
+            std::clog << "cannot create framebuffer for connector " << conn->connector_id << std::endl;
+            modeset_destroy_fb(fd, &dev->bufs[0]);
+            return ret;
+        }
+
         return 0;
+    }
+
+    /**
+     *
+     */
+    void DrmUtil::modeset_destroy_fb(int fd, modeset_buf *buf) {
+        struct drm_mode_destroy_dumb dreq;
+
+        /* unmap buffer */
+        munmap(buf->map, buf->size);
+
+        /* delete framebuffer */
+        drmModeRmFB(fd, buf->fb);
+
+        /* delete dumb buffer */
+        memset(&dreq, 0, sizeof(dreq));
+        dreq.handle = buf->handle;
+        drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
     }
 
     /**
@@ -325,11 +348,24 @@ err_destroy:
         return 0;
     }
 
+    
+    void DrmUtil::swap_buffers() {
+        modeset_buf * buf = &mdev->bufs[mdev->front_buf ^ 1];
+        int32_t ret = drmModeSetCrtc(fd, mdev->crtc, buf->fb, 0, 0,
+					     &mdev->conn, 1, &mdev->mode);
+        if (ret) {
+            std::clog << "cannot flip CRTC for connector " << mdev->conn << " (" << errno << ")" << std::endl;
+        } else {
+            mdev->front_buf ^= 1;
+        }
+    }
+
     /**
      *
      */
     int32_t DrmUtil::initDrmDev() {
         int32_t ret;
+        modeset_buf *buf;
 
         /* open the DRM device */
         ret = modeset_open(&fd, _card);
@@ -346,7 +382,8 @@ err_destroy:
         /* perform actual modesetting on each found connector+CRTC */
         for (mdev = modeset_list; mdev; mdev = mdev->next) {
             mdev->saved_crtc = drmModeGetCrtc(fd, mdev->crtc);
-            ret = drmModeSetCrtc(fd, mdev->crtc, mdev->fb, 0, 0,
+            buf = &mdev->bufs[mdev->front_buf];
+            ret = drmModeSetCrtc(fd, mdev->crtc, buf->fb, 0, 0,
                     &mdev->conn, 1, &mdev->mode);
             if (ret) {
                 std::clog << "cannot set CRTC for connector " << mdev->conn << "(" 
