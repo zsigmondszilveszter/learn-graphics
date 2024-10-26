@@ -1,6 +1,5 @@
 #include <iostream> 
 #include <csignal>
-#include <chrono>
 #include <cmath>
 
 #include <cxxopts.hpp>
@@ -10,6 +9,7 @@
 #include "triangle.h"
 #include "line_drawer.h"
 #include "fps_digits.h"
+#include "tools.hpp"
 
 
 #define BUFFER_SLICE 10
@@ -26,8 +26,8 @@ const uint32_t color_black    = 0x0;
 
 bool keep_running = true;
 bool show_fps = false;
+uint32_t nr_of_draw_workers = 2U; // the last fallback
 LinuxMouseEvent::MouseEventReader * mouse_event_reader;
-const uint32_t nr_of_draw_workers = 15;
 std::vector<SG::LineDrawer *> workers;
 drm_util::DrmUtil * drmUtil;
 
@@ -135,6 +135,7 @@ int main(int argc, char **argv) {
     options.add_options()
         ("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", cxxopts::value<std::string>()->default_value("/dev/dri/card0"))
         ("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"", cxxopts::value<std::string>()->default_value("/dev/input/event7"))
+        ("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.", cxxopts::value<uint32_t>())
         ("show-fps", "Show custom built FPS counter in the upper right corner")
         ("h,help", "Prints this help message.");
     auto arguments = options.parse(argc, argv);
@@ -147,6 +148,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, sig_handler);
 
     show_fps = arguments.count("show-fps");
+    nr_of_draw_workers = arguments.count("w") ? arguments["w"].as<uint32_t>() : std::max(2U, tl::Tools::nr_of_cpus());
 
     // initialize the drm device
     std::string drm_card_name = arguments["dri-device"].as<std::string>();

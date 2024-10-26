@@ -25,13 +25,17 @@ add_subdirectory(../lib/drm_util  drm_util)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE DrmUtil)
 
 add_subdirectory(../lib/base_geometry  base_geometry)
-target_link_libraries(draw_triangle_with_drm_mouse_input PUBLIC BaseGeometry)
+target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE BaseGeometry)
 
 add_subdirectory(../lib/triangle  triangle)
-target_link_libraries(draw_triangle_with_drm_mouse_input PUBLIC Triangle)
+target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE Triangle)
 
 add_subdirectory(../lib/line_drawer  line_drawer)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE LineDrawer)
 
 add_subdirectory(../lib/fps_digits  fps_digits)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE FpsDigits)
+
+add_subdirectory(../lib/tools tools)
+target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE Tools)
+
