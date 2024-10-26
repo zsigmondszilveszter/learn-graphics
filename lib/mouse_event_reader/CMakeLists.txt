@@ -1,0 +1,4 @@
+add_library(MouseEventReader mouse_event_reader.cpp)
+
+target_include_directories(MouseEventReader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(MouseEventReader PRIVATE cxx_std_20)

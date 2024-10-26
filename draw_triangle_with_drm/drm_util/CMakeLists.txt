@@ -1,7 +1,5 @@
 add_library(DrmUtil drm_util.cpp)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS true)
-
 target_include_directories(DrmUtil
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
     )

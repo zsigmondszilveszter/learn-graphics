@@ -8,16 +8,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 add_executable(draw_triangle_with_drm
     main.cpp
-    )
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
+)
 
 #
 add_library(draw_triangle_with_drm_compiler_flags INTERFACE)
 target_compile_features(draw_triangle_with_drm_compiler_flags INTERFACE cxx_std_11)
 
 # include libdrm
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/") # cmake module to find the system wide installed libdrm location
 find_package(Libdrm REQUIRED)
 message(STATUS "libdrm_INCLUDE_DIRS: ${Libdrm_INCLUDE_DIRS}")
 target_include_directories(draw_triangle_with_drm PRIVATE ${Libdrm_INCLUDE_DIRS})

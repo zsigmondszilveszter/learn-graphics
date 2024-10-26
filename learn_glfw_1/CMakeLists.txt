@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.10)
 project(learn_glfw_1
     VERSION 1.0.0)
 
+#compile commmands 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+
 add_executable(learn_glfw_1
     learn_glfw_1.cpp
     glad/src/gles2.c

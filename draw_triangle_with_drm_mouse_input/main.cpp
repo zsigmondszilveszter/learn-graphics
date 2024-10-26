@@ -1,35 +1,62 @@
-#include <cstdint>
-#include <iostream>
-#include <ctime>
-#include <cmath>
+#include <iostream> 
 #include <csignal>
+#include <chrono>
+#include <cmath>
 
-#include <unistd.h>
-#include <execinfo.h> // backtrace
-
-#include "drm_util.h"
-#include "line_drawer.h"
+#include <cxxopts.hpp>
+#include <mouse_event_reader.hpp>
+#include <drm_util.h>
 #include "base_geometry.h"
-#include "fps_digits.h"
 #include "triangle.h"
+#include "line_drawer.h"
+#include "fps_digits.h"
+
 
 #define BUFFER_SLICE 10
 #define BUFFER_UPPER_LIMIT 1000
-#define FPS_COUNTER true
 #define NANO_TO_SEC_CONV 1000000000L
 
 
-uint32_t color_blue     = 0x4285f4; // google blue
-uint32_t color_green    = 0x0F9D58; // google green
-uint32_t color_yellow   = 0xF4B400; // google yellow
-uint32_t color_red      = 0xDB4437; // google red
-uint32_t color_white    = 0xFFFFFF;
-uint32_t color_black    = 0x0;
+const uint32_t color_blue     = 0x4285f4; // google blue
+const uint32_t color_green    = 0x0F9D58; // google green
+const uint32_t color_yellow   = 0xF4B400; // google yellow
+const uint32_t color_red      = 0xDB4437; // google red
+const uint32_t color_white    = 0xFFFFFF;
+const uint32_t color_black    = 0x0;
+
 bool keep_running = true;
-//const uint32_t nr_of_draw_workers = std::min(4U, std::thread::hardware_concurrency() - 1);
+bool show_fps = false;
+LinuxMouseEvent::MouseEventReader * mouse_event_reader;
 const uint32_t nr_of_draw_workers = 15;
 std::vector<SG::LineDrawer *> workers;
 drm_util::DrmUtil * drmUtil;
+
+/**
+ *
+ */
+void clean_up() {
+    // join worker threads
+    while (workers.size()) {
+        delete workers.back(); // the destructor calls the thread join
+        workers.pop_back();
+    }
+    delete mouse_event_reader;
+    delete drmUtil;
+}
+
+/**
+ *
+ */
+void sig_handler(int signo) {
+    if (signo == SIGINT) {
+        std::cerr << " - Received SIGINT, cleaning up." << std::endl;
+        keep_running = false;
+
+        clean_up();
+
+        exit(0);
+    }
+}
 
 static int64_t get_nanos(void) {
     struct timespec ts;
@@ -55,12 +82,6 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
     int32_t upper_bound = (int32_t)std::min(new_upper_bound, old_upper_bound);
     int32_t lower_bound = (int32_t)std::max(new_lower_bound, old_lower_bound);
 
-    // increase the box a little bit to surely cover the previous triangle
-    left_bound  -= 60;
-    right_bound += 60;
-    upper_bound -= 60;
-    lower_bound += 60;
-
     // check all the pixels inside the square of these bounds
     uint32_t slice = 0;
     for (int32_t y=upper_bound; y <= lower_bound; y+=BUFFER_SLICE) {
@@ -71,7 +92,6 @@ void draw_triangle(drm_util::modeset_buf * buf, GM::Triangle tr, GM::Triangle ol
     }
 }
 
-#if(FPS_COUNTER)
 uint32_t fps = 0;
 uint32_t max_nr_of_digits = 0;
 uint64_t previous_fps_changed_at = get_nanos();
@@ -103,53 +123,49 @@ void fps_counter(drm_util::modeset_buf * buf, int64_t t_diff, int64_t time) {
         nr_of_digits++;
     }
 }
-#endif
 
-void cleanUp() {
-    // join worker threads
-    while (workers.size()) {
-        delete workers.back(); // the destructor calls the thread join
-        workers.pop_back();
-    }
-    delete drmUtil;
-}
-
-void sig_handler(int signo) {
-    if (signo == SIGINT) {
-        std::cerr << " - Received SIGINT, cleaning up." << std::endl;
-        keep_running = false;
-
-        cleanUp();
-
-        exit(0);
-    }
-}
-
+/**
+ *
+ */
 int main(int argc, char **argv) {
-	const char *card;
+    // argument parser
+    cxxopts::Options options("Draws a Triangle using Linux DRM library", "This program draws a Triangle using Linux DRM library "
+            "using mouse event reader. It can't run under a windowing system like X11/Wayland as it directly opens and writes " 
+            "to the given DRI device which is not accessible under X11.\nAuthor Szilveszter Zsigmond.");
+    options.add_options()
+        ("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", cxxopts::value<std::string>()->default_value("/dev/dri/card0"))
+        ("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"", cxxopts::value<std::string>()->default_value("/dev/input/event7"))
+        ("show-fps", "Show custom built FPS counter in the upper right corner")
+        ("h,help", "Prints this help message.");
+    auto arguments = options.parse(argc, argv);
+    if (arguments.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
 
     // registar signal handler
     signal(SIGINT, sig_handler);
 
-	/* check which DRM device to open */
-	if (argc > 1) {
-		card = argv[1];
-	} else {
-		card = "/dev/dri/card0";
+    show_fps = arguments.count("show-fps");
+
+    // initialize the drm device
+    std::string drm_card_name = arguments["dri-device"].as<std::string>();
+    drmUtil = new drm_util::DrmUtil(drm_card_name.c_str());
+    int32_t response = drmUtil->initDrmDev();
+    if (response) {
+        return response;
     }
 
-    // init drmUtil on card
-    drmUtil = new drm_util::DrmUtil(card);
-    int32_t response;
-    if ((response = drmUtil->initDrmDev())) {
-        return response;
+    // initialize the MouseEventReader
+    std::string input_device_name = arguments["mouse-input-device"].as<std::string>();
+    mouse_event_reader = new LinuxMouseEvent::MouseEventReader(input_device_name.c_str());
+    int32_t response2 = mouse_event_reader->openEventFile();
+    if (response2) {
+        return response2;
     }
 
     // draw a triangle and then rotate it
     double trg_offset_x, trg_offset_y, trg_side;
-    //trg_offset_x = 350;
-    //trg_offset_y = 150;
-    //trg_side = 700;
     trg_offset_x = trg_offset_y = trg_side = 400;
     const double sin60 = sin(60 * M_PI / 180);
     const double cos60 = cos(60 * M_PI / 180);
@@ -161,48 +177,58 @@ int main(int argc, char **argv) {
     );
     GM::Triangle new_triangle = GM::Triangle(&trg);
 
+    uint32_t max_radius = trg.getRadiusOfTheOuterCircle();
+
     // start worker threads
     for ( uint32_t i = 0; i < nr_of_draw_workers; i++) {
         workers.push_back(new SG::LineDrawer(i));
     }
 
     int64_t prev_t = get_nanos();
-    GM::Vertex center = trg.getCenter();
     drm_util::modeset_buf * buf;
-    // rotate triangle
+
     while (keep_running) {
         int64_t t = get_nanos();
         int64_t t_diff = t - prev_t;
         double angle = (double)(t_diff) * 0.000000001;
-        new_triangle.setPrimitive({
-            GM::BaseGeometry::rotate(trg.getPrimitive().p1, center, angle),
-            GM::BaseGeometry::rotate(trg.getPrimitive().p2, center, angle),
-            GM::BaseGeometry::rotate(trg.getPrimitive().p3, center, angle)
-        });
-        //
-        //buf = &drmUtil->mdev->bufs[drmUtil->mdev->front_buf ^ 1];
         buf = &drmUtil->mdev->bufs[0];
+
+        // copy the old triangle date to the new one
+        new_triangle.setPrimitive(trg.getPrimitive());
+
+        // current mouse position
+        auto mouse_position = mouse_event_reader->getMousePosition();
+
+        // translate the Triangle
+        GM::Vertex new_center = {
+            1.0 * std::min(std::max(mouse_position.x, max_radius), buf->width - max_radius),
+            1.0 * std::min(std::max(mouse_position.y, max_radius), buf->height - max_radius),
+            0
+        };
+        new_triangle.translateToNewCenter(new_center);
+
+        // rotate the Triangle
+        new_triangle.rotateAroundTheCenter(angle);
+
+        // draw the old triangle with black ink and the new with a custom color ink
         draw_triangle(buf, new_triangle, trg, color_white);
 
-#if(FPS_COUNTER)
-        fps_counter(buf, t_diff, t);
-#endif
+        if (show_fps) {
+            fps_counter(buf, t_diff, t);
+        }
 
         // wait til all the draws are done
         for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
             workers[i]->blockMainThreadUntilTheQueueIsNotEmpty();
         }
 
-
-        // swap buffers
-        //drmUtil->swap_buffers();
-
         //
         prev_t = t;
         trg = new_triangle;
     }
 
-    cleanUp();
+    clean_up();
 
     return 0;
 }
+

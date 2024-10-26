@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib/line_drawer",
+  "command": "/usr/bin/c++  -I/home/szilveszter/prog/practice/learn-graphics/lib/base_geometry -I/home/szilveszter/prog/practice/learn-graphics/lib/triangle -I/home/szilveszter/prog/practice/learn-graphics/lib/drm_util -I/usr/include/libdrm -O3 -DNDEBUG -o CMakeFiles/LineDrawer.dir/line_drawer.cpp.o -c /home/szilveszter/prog/practice/learn-graphics/lib/line_drawer/line_drawer.cpp",
+  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/line_drawer/line_drawer.cpp",
+  "output": "line_drawer/CMakeFiles/LineDrawer.dir/line_drawer.cpp.o"
+}
+]
