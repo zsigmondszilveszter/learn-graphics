@@ -15,6 +15,16 @@ namespace LinuxMouseEvent {
         this->_eventFileHandler = eventFileHandler;
     }
 
+
+    /**
+     *
+     */
+    MouseEventReader::MouseEventReader(const char * eventFileHandler, uint32_t max_x, uint32_t max_y) {
+        this->_eventFileHandler = eventFileHandler;
+        this->max_x = max_x;
+        this->max_y = max_y;
+    }
+
     /**
      *
      */
@@ -138,8 +148,8 @@ out_return:
         if (x_pos < 0) {
             x_pos = 0;
         }
-        if (x_pos > 1920) {
-            x_pos = 1920;
+        if (x_pos > max_x) {
+            x_pos = max_x;
         }
     }
 
@@ -150,8 +160,8 @@ out_return:
         if (y_pos < 0) {
             y_pos = 0;
         }
-        if (y_pos > 1080) {
-            y_pos = 1080;
+        if (y_pos > max_y) {
+            y_pos = max_y;
         }
     }
 

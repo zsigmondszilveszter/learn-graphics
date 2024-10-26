@@ -15,6 +15,7 @@ namespace LinuxMouseEvent {
     class MouseEventReader {
         public:
             MouseEventReader(const char * eventFileHandler);
+            MouseEventReader(const char * eventFileHandler, uint32_t max_x, uint32_t max_y);
             ~MouseEventReader();
             virtual int32_t openEventFile();
             virtual MousePosition getMousePosition();
@@ -27,6 +28,9 @@ namespace LinuxMouseEvent {
             int32_t x_pos = 0; 
             int32_t y_pos = 0;
             std::thread thd;
+
+            uint32_t max_x = 800; // default
+            uint32_t max_y = 600; // default
 
             virtual void readerThread();
             virtual void movePosX(int32_t x);

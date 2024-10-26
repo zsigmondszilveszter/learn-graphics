@@ -158,7 +158,11 @@ int main(int argc, char **argv) {
 
     // initialize the MouseEventReader
     std::string input_device_name = arguments["mouse-input-device"].as<std::string>();
-    mouse_event_reader = new LinuxMouseEvent::MouseEventReader(input_device_name.c_str());
+    uint32_t max_x = (&drmUtil->mdev->bufs[0])->width;
+    uint32_t max_y = (&drmUtil->mdev->bufs[0])->height;
+    mouse_event_reader = new LinuxMouseEvent::MouseEventReader(
+            input_device_name.c_str(),
+            max_x, max_y);
     int32_t response2 = mouse_event_reader->openEventFile();
     if (response2) {
         return response2;
