@@ -197,7 +197,7 @@ namespace drm_util {
         }
 
         /* perform actual memory mapping */
-        buf->map = (uint32_t *) mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED,
+        buf->map = (int32_t *) mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED,
                 fd, mreq.offset);
         if (buf->map == MAP_FAILED) {
             std::clog << "cannot mmap dumb buffer (" << errno << ")" << std::endl;

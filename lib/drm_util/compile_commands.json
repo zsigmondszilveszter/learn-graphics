@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib/drm_util",
+  "command": "/usr/bin/c++  -I/usr/include/libdrm -O3 -DNDEBUG -o CMakeFiles/DrmUtil.dir/drm_util.cpp.o -c /home/szilveszter/prog/practice/learn-graphics/lib/drm_util/drm_util.cpp",
+  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/drm_util/drm_util.cpp",
+  "output": "drm_util/CMakeFiles/DrmUtil.dir/drm_util.cpp.o"
+}
+]

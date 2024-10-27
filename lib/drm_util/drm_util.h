@@ -14,7 +14,7 @@ namespace drm_util {
         uint32_t stride;
         uint32_t size;
         uint32_t handle;
-        uint32_t *map;
+        int32_t *map;
         uint32_t fb;
     };
 
@@ -22,7 +22,7 @@ namespace drm_util {
     struct modeset_dev {
         modeset_dev *next;
         
-        uint32_t front_buf;
+        int32_t front_buf;
         modeset_buf bufs[2];
 
         drmModeModeInfo mode;
