@@ -9,7 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 add_executable(draw_triangle_with_drm_mouse_input
     main.cpp
 )
-target_compile_features(draw_triangle_with_drm_mouse_input PRIVATE cxx_std_20)
+target_compile_features(draw_triangle_with_drm_mouse_input PRIVATE cxx_std_17)
 
 
 # cxxopts argument parser library
