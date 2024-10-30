@@ -12,9 +12,8 @@ add_executable(draw_triangle_with_drm_mouse_input
 target_compile_features(draw_triangle_with_drm_mouse_input PRIVATE cxx_std_17)
 
 
-# cxxopts argument parser library
-add_subdirectory(../libraries_external/cxxopts  cxxopts)
-target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE cxxopts)
+add_subdirectory(../lib/cxxopts_wrapper cxxopts_wrapper)
+target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE CxxOptsWrapper)
 
 #
 add_subdirectory(../lib/mouse_event_reader  mouse_event_reader)

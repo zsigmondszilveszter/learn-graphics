@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib/cxxopts_wrapper",
+  "command": "/usr/bin/c++  -I/home/szilveszter/prog/practice/learn-graphics/libraries_external/cxxopts/include -O3 -DNDEBUG -c /home/szilveszter/prog/practice/learn-graphics/draw_triangle_with_drm_mouse_input/main.cpp",
+  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/cxxopts_wrapper/cxxopts_wrapper.cpp",
+  "output": "cxxopts_wrapper.cpp.o"
+}
+]

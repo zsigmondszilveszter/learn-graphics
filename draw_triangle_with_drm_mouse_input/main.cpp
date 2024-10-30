@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <optional>
 
-#include <cxxopts.hpp>
+#include <cxxopts_wrapper.hpp>
 #include <mouse_event_reader.hpp>
 #include <drm_util.h>
 #include "base_geometry.h"
@@ -143,32 +143,31 @@ SG::SquareDefinition fps_counter(drm_util::modeset_buf * buf, int64_t t_diff, in
  */
 int main(int argc, char **argv) {
     // argument parser
-    cxxopts::Options options("Draws a Triangle using Linux DRM library", "This program draws a Triangle using Linux DRM library "
-            "using mouse event reader. It can't run under a windowing system like X11/Wayland as it directly opens and writes " 
+    tl::CxxOptsWrapper cxxOptsWrapper("draw_triangle_with_drom_mouse_input", "This program draws a Triangle using Linux DRM library "
+            "and moves it by using mouse events. It can't run under a windowing system like X11/Wayland as it directly opens and writes " 
             "to the given DRI device which is not accessible under X11.\nAuthor Szilveszter Zsigmond.");
-    options.add_options()
-        ("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", cxxopts::value<std::string>()->default_value("/dev/dri/card0"))
-        ("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"", cxxopts::value<std::string>()->default_value("/dev/input/event7"))
-        ("s,triangle-side-size", "The size of the triangle side. The default is 400.", cxxopts::value<uint32_t>())
-        ("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.", cxxopts::value<uint32_t>())
-        ("double-buffering", "Use double buffer from the DRM library")
-        ("show-fps", "Show custom built FPS counter in the upper right corner")
-        ("h,help", "Prints this help message.");
-    auto arguments = options.parse(argc, argv);
-    if (arguments.count("help")) {
-        std::cout << options.help() << std::endl;
+    cxxOptsWrapper.addOptionString("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", "/dev/dri/card0");
+    cxxOptsWrapper.addOptionString("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"","/dev/input/event7");
+    cxxOptsWrapper.addOptionInteger("s,triangle-side-size", "The size of the triangle side. The default is 400.");
+    cxxOptsWrapper.addOptionInteger("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.");
+    cxxOptsWrapper.addOptionBoolean("double-buffering", "Use double buffer from the DRM library");
+    cxxOptsWrapper.addOptionBoolean("show-fps", "Show custom built FPS counter in the upper right corner");
+    cxxOptsWrapper.addOptionHelp("Prints this help message.");
+    cxxOptsWrapper.parseArguments(argc, argv);
+    if (cxxOptsWrapper.count("help")) {
+        std::cout << cxxOptsWrapper.getHelp() << std::endl;
         return 0;
     }
 
     // registar signal handler
     signal(SIGINT, sig_handler);
 
-    show_fps = arguments.count("show-fps");
-    nr_of_draw_workers = arguments.count("w") ? arguments["w"].as<uint32_t>() : std::max(2U, tl::Tools::nr_of_cpus());
-    double_buffering = arguments.count("double-buffering");
+    show_fps = cxxOptsWrapper.count("show-fps");
+    nr_of_draw_workers = cxxOptsWrapper.count("w") ? cxxOptsWrapper.getOptionInteger("w") : std::max(2U, tl::Tools::nr_of_cpus());
+    double_buffering = cxxOptsWrapper.count("double-buffering");
 
     // initialize the drm device
-    std::string drm_card_name = arguments["dri-device"].as<std::string>();
+    std::string drm_card_name = cxxOptsWrapper.getOptionString("dri-device");
     drmUtil = new drm_util::DrmUtil(drm_card_name.c_str());
     int32_t response = drmUtil->initDrmDev();
     if (response) {
@@ -177,7 +176,7 @@ int main(int argc, char **argv) {
     drm_util::modeset_buf * buf = &drmUtil->mdev->bufs[0];
 
     // initialize the MouseEventReader
-    std::string input_device_name = arguments["mouse-input-device"].as<std::string>();
+    std::string input_device_name = cxxOptsWrapper.getOptionString("mouse-input-device");
     uint32_t max_x = (&drmUtil->mdev->bufs[0])->width;
     uint32_t max_y = (&drmUtil->mdev->bufs[0])->height;
     mouse_event_reader = new LinuxMouseEvent::MouseEventReader(
@@ -189,7 +188,7 @@ int main(int argc, char **argv) {
     }
 
     // initial position and orientation of the triangle
-    const uint32_t trg_side = arguments.count("s") ? arguments["s"].as<uint32_t>() : 400;
+    const uint32_t trg_side = cxxOptsWrapper.count("s") ? cxxOptsWrapper.getOptionInteger("s") : 400;
     double trg_offset_x = 0;
     double trg_offset_y = 0;
     const double sin60 = sin(60 * M_PI / 180);
