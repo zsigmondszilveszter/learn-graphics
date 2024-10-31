@@ -15,7 +15,6 @@
 #include "tools.hpp"
 
 
-#define BUFFER_SLICE 10
 #define NANO_TO_SEC_CONV 1000000000L
 
 
@@ -30,6 +29,7 @@ bool keep_running = true;
 bool show_fps = false;
 bool double_buffering = false;
 uint32_t nr_of_draw_workers = 2U; // the last fallback
+uint32_t buffer_slice = 10;
 LinuxMouseEvent::MouseEventReader * mouse_event_reader;
 std::vector<SG::LineDrawer *> workers;
 drm_util::DrmUtil * drmUtil;
@@ -68,7 +68,7 @@ static int64_t get_nanos(void) {
     return (int64_t)ts.tv_sec * NANO_TO_SEC_CONV + ts.tv_nsec;
 }
 
-SG::SquareDefinition defineTheContainerSquareOfTriangles(GM::Triangle * tr1, GM::Triangle * tr2) {
+SG::SquareDefinition defineTheSquareContainingTheTriangles(GM::Triangle * tr1, GM::Triangle * tr2) {
     // find a square the two triangle fit inside
     auto prmt1 = tr1->getPrimitive();
     auto prmt2 = tr2->getPrimitive();
@@ -87,10 +87,10 @@ void distribute_triangle_draws(GM::Triangle * tr, SG::SquareDefinition squareCoo
     uint32_t bg_color = color_black;
     // distribute slices of the big 2D square, the triangle is inside, between worker threads
     uint32_t slice = 0;
-    for (int32_t y=squareCoordinates.y1; y <= squareCoordinates.y2; y+=BUFFER_SLICE) {
+    for (int32_t y=squareCoordinates.y1; y <= squareCoordinates.y2; y+=buffer_slice) {
         SG::SquareDefinition square_slice = {
             squareCoordinates.x1, y, 
-            squareCoordinates.x2, std::min(y + BUFFER_SLICE, squareCoordinates.y2)
+            squareCoordinates.x2, std::min(y + (int32_t)buffer_slice, squareCoordinates.y2)
         }; 
         SG::DrawWork work = {
             square_slice,
@@ -150,6 +150,7 @@ int main(int argc, char **argv) {
     cxxOptsWrapper.addOptionString("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"","/dev/input/event7");
     cxxOptsWrapper.addOptionInteger("s,triangle-side-size", "The size of the triangle side. The default is 400.");
     cxxOptsWrapper.addOptionInteger("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.");
+    cxxOptsWrapper.addOptionInteger("buffer-slice", "The size of buffer slice we are pushing to one draw worker once. Default is 10.");
     cxxOptsWrapper.addOptionBoolean("double-buffering", "Use double buffer from the DRM library");
     cxxOptsWrapper.addOptionBoolean("show-fps", "Show custom built FPS counter in the upper right corner");
     cxxOptsWrapper.addOptionHelp("Prints this help message.");
@@ -165,6 +166,7 @@ int main(int argc, char **argv) {
     show_fps = cxxOptsWrapper.count("show-fps");
     nr_of_draw_workers = cxxOptsWrapper.count("w") ? cxxOptsWrapper.getOptionInteger("w") : std::max(2U, tl::Tools::nr_of_cpus());
     double_buffering = cxxOptsWrapper.count("double-buffering");
+    buffer_slice = cxxOptsWrapper.count("bl") ? cxxOptsWrapper.getOptionInteger("bl") : buffer_slice;
 
     // initialize the drm device
     std::string drm_card_name = cxxOptsWrapper.getOptionString("dri-device");
@@ -244,14 +246,13 @@ int main(int argc, char **argv) {
             0
         };
 
-
         // translate the Triangle
         new_triangle->translateToNewCenter(new_center);
 
         // rotate the Triangle
         new_triangle->rotateAroundTheCenter(angle);
 
-        SG::SquareDefinition squareCoordinates = defineTheContainerSquareOfTriangles(new_triangle, old_triangle);
+        SG::SquareDefinition squareCoordinates = defineTheSquareContainingTheTriangles(new_triangle, old_triangle);
         // draw the old triangle with black ink and the new with a custom color ink
         distribute_triangle_draws(new_triangle, squareCoordinates, color_white, buf->map);
 
@@ -261,11 +262,6 @@ int main(int argc, char **argv) {
         if (show_fps && previous_fps_changed_at < t - NANO_TO_SEC_CONV) {
             fps_updated = std::optional<SG::SquareDefinition>{fps_counter(buf, t_diff, t, fps_draw_worker)};
             previous_fps_changed_at = t;
-        }
-
-        // wait until all the draws are done
-        for (uint32_t i = 0; i < nr_of_draw_workers; i++) {
-            workers[i]->blockMainThreadUntilTheQueueIsNotEmpty();
         }
 
         // the fps digits from draw workers' buffers into the DRM buffer
