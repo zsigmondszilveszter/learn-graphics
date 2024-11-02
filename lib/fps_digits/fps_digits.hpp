@@ -1,7 +1,7 @@
 #if !defined(FPS_DIGITS_H)
 #define FPS_DIGITS_H
 
-namespace GM {
+namespace szilv {
 
     class FpsDigits {
         public:

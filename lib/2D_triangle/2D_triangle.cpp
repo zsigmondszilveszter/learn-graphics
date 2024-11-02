@@ -1,18 +1,18 @@
 #include <cmath>
 #include <algorithm>
-#include "triangle.h"
+#include "2D_triangle.hpp"
 
-namespace GM {
+namespace szilv {
 
-    Triangle::Triangle(Vertex v1, Vertex v2, Vertex v3) {
+    Triangle2D::Triangle2D(Vertex v1, Vertex v2, Vertex v3) {
         this->tr = { v1, v2, v3 };
     }
     
-    Triangle::Triangle(TrianglePrimitive trg_prm) {
+    Triangle2D::Triangle2D(TrianglePrimitive trg_prm) {
         setPrimitive(trg_prm);
     }
 
-    Triangle::Triangle(Triangle *trg) {
+    Triangle2D::Triangle2D(Triangle2D *trg) {
         this->tr = {
             trg->getPrimitive().p1,
             trg->getPrimitive().p2,
@@ -20,13 +20,13 @@ namespace GM {
         };
     }
 
-    Vertex Triangle::getCenter() {
+    Vertex Triangle2D::getCenter() {
         double centerX = (tr.p1.x + tr.p2.x + tr.p3.x) / 3;
         double centerY = (tr.p1.y + tr.p2.y + tr.p3.y) / 3;
         return {centerX, centerY, 0.0};
     }
 
-    uint32_t Triangle::getRadiusOfTheOuterCircle() {
+    uint32_t Triangle2D::getRadiusOfTheOuterCircle() {
         Vertex centroid = getCenter();
         double d1 = distance(centroid, this->tr.p1);
         double d2 = distance(centroid, tr.p2);
@@ -35,26 +35,26 @@ namespace GM {
         return (uint32_t)std::round(m);
     }
 
-    void Triangle::translateToNewCenter(Vertex new_centeroid) {
+    void Triangle2D::translateToNewCenter(Vertex new_centeroid) {
         // get the current center 
         Vertex current_centeroid = getCenter();
         // calculate the translation numbers
         double x_trans = new_centeroid.x - current_centeroid.x;
         double y_trans = new_centeroid.y - current_centeroid.y;
         // translate the vertices
-        tr.p1 = GM::BaseGeometry::translate3D(tr.p1, x_trans, y_trans, 0);
-        tr.p2 = GM::BaseGeometry::translate3D(tr.p2, x_trans, y_trans, 0);
-        tr.p3 = GM::BaseGeometry::translate3D(tr.p3, x_trans, y_trans, 0);
+        tr.p1 = BaseGeometry::translate3D(tr.p1, x_trans, y_trans, 0);
+        tr.p2 = BaseGeometry::translate3D(tr.p2, x_trans, y_trans, 0);
+        tr.p3 = BaseGeometry::translate3D(tr.p3, x_trans, y_trans, 0);
     }
 
-    void Triangle::rotateAroundTheCenter(double angle) {
+    void Triangle2D::rotateAroundTheCenter(double angle) {
         Vertex centeroid = getCenter();
-        tr.p1 = GM::BaseGeometry::rotate2D(tr.p1, centeroid, angle);
-        tr.p2 = GM::BaseGeometry::rotate2D(tr.p2, centeroid, angle);
-        tr.p3 = GM::BaseGeometry::rotate2D(tr.p3, centeroid, angle);
+        tr.p1 = BaseGeometry::rotate2D(tr.p1, centeroid, angle);
+        tr.p2 = BaseGeometry::rotate2D(tr.p2, centeroid, angle);
+        tr.p3 = BaseGeometry::rotate2D(tr.p3, centeroid, angle);
     }
 
-    bool Triangle::pointInTriangle(Vertex point) {
+    bool Triangle2D::pointInTriangle(Vertex point) {
         double d1, d2, d3;
         bool has_neg, has_pos;
 
@@ -68,11 +68,11 @@ namespace GM {
         return !(has_neg && has_pos);
     }
 
-    void Triangle::setPrimitive(TrianglePrimitive trg_prm) {
+    void Triangle2D::setPrimitive(TrianglePrimitive trg_prm) {
         this->tr = trg_prm;
     }
 
-    double Triangle::distance(Vertex p1, Vertex p2) {
+    double Triangle2D::distance(Vertex p1, Vertex p2) {
         return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
     }
 }

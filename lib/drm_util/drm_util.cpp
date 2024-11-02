@@ -4,7 +4,7 @@
  * https://github.com/dvdhrm/docs/blob/master/drm-howto/modeset.c
  */
 
-#include "drm_util.h"
+#include "drm_util.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -13,7 +13,7 @@
 #include <iostream>
 #include <cstring>
 
-namespace drm_util {
+namespace szilv {
     DrmUtil::DrmUtil(const char * card) {
         this->_card = card;
         std::clog << "using card " << card << std::endl;

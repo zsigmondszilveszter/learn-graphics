@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib",
+  "command": "/usr/bin/c++  -I/home/szilveszter/prog/practice/learn-graphics/lib/base_geometry -O3 -DNDEBUG -o CMakeFiles/Triangle2D.dir/triangle2D.cpp.o -c /home/szilveszter/prog/practice/learn-graphics/lib/triangle2D/triangle2D.cpp",
+  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/triangle2D/triangle2D.cpp",
+  "output": "triangle2D/CMakeFiles/Triangle2D.dir/triangle2D.cpp.o"
+}
+]

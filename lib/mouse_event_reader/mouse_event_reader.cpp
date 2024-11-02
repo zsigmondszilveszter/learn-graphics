@@ -7,7 +7,7 @@
 
 #include "mouse_event_reader.hpp"
 
-namespace LinuxMouseEvent {
+namespace szilv {
     /**
      *
      */

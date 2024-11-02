@@ -1,10 +1,10 @@
 #if !defined(TRIANGLE)
 #define TRIANGLE
 
-#include "base_geometry.h"
+#include "base_geometry.hpp"
 #include <cstdint>
 
-namespace GM {
+namespace szilv {
 
     typedef struct {
         Vertex p1;
@@ -12,11 +12,11 @@ namespace GM {
         Vertex p3;
     } TrianglePrimitive;
 
-    class Triangle {
+    class Triangle2D {
         public:
-            Triangle(Vertex v1, Vertex v2, Vertex v3);
-            Triangle(TrianglePrimitive trg_prm);
-            Triangle(Triangle *trg);
+            Triangle2D(Vertex v1, Vertex v2, Vertex v3);
+            Triangle2D(TrianglePrimitive trg_prm);
+            Triangle2D(Triangle2D *trg);
 
             virtual Vertex getCenter();
             virtual uint32_t getRadiusOfTheOuterCircle();

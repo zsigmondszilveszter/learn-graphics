@@ -7,11 +7,11 @@
 
 #include <cxxopts_wrapper.hpp>
 #include <mouse_event_reader.hpp>
-#include <drm_util.h>
-#include "base_geometry.h"
-#include "triangle.h"
-#include "line_drawer.h"
-#include "fps_digits.h"
+#include <drm_util.hpp>
+#include "base_geometry.hpp"
+#include "2D_triangle.hpp"
+#include "2D_line_drawer.hpp"
+#include "fps_digits.hpp"
 #include "tools.hpp"
 
 
@@ -30,9 +30,9 @@ bool show_fps = false;
 bool double_buffering = false;
 uint32_t nr_of_draw_workers = 2U; // the last fallback
 uint32_t buffer_slice = 10;
-LinuxMouseEvent::MouseEventReader * mouse_event_reader;
-std::vector<SG::LineDrawer *> workers;
-drm_util::DrmUtil * drmUtil;
+szilv::MouseEventReader * mouse_event_reader;
+szilv::DrmUtil * drmUtil;
+std::vector<szilv::LineDrawer2D *> workers;
 
 
 /**
@@ -68,7 +68,7 @@ static int64_t get_nanos(void) {
     return (int64_t)ts.tv_sec * NANO_TO_SEC_CONV + ts.tv_nsec;
 }
 
-SG::SquareDefinition defineTheSquareContainingTheTriangles(GM::Triangle * tr1, GM::Triangle * tr2) {
+szilv::SquareDefinition defineTheSquareContainingTheTriangles(szilv::Triangle2D * tr1, szilv::Triangle2D * tr2) {
     // find a square the two triangle fit inside
     auto prmt1 = tr1->getPrimitive();
     auto prmt2 = tr2->getPrimitive();
@@ -83,28 +83,34 @@ SG::SquareDefinition defineTheSquareContainingTheTriangles(GM::Triangle * tr1, G
 /**
  *
  */
-void distribute_triangle_draws(GM::Triangle * tr, SG::SquareDefinition squareCoordinates, uint32_t color, int32_t * buff) {
+void distribute_triangle_draws(szilv::Triangle2D * tr, szilv::SquareDefinition squareCoordinates, uint32_t color, szilv::modeset_buf * buf) {
     uint32_t bg_color = color_black;
     // distribute slices of the big 2D square, the triangle is inside, between worker threads
     uint32_t slice = 0;
     for (int32_t y=squareCoordinates.y1; y <= squareCoordinates.y2; y+=buffer_slice) {
-        SG::SquareDefinition square_slice = {
+        szilv::SquareDefinition square_slice = {
             squareCoordinates.x1, y, 
             squareCoordinates.x2, std::min(y + (int32_t)buffer_slice, squareCoordinates.y2)
         }; 
-        SG::DrawWork work = {
-            square_slice,
+        auto isInside = [tr](szilv::Vertex point) -> bool {
+            return tr->pointInTriangle(point);
+        };
+        szilv::DrawWork work = {
             color, bg_color, 
-            SG::Triangle, (void*)tr
+            (void*)tr, isInside,
+            square_slice, buf->map,
+            buf->width, buf->height
         };
         auto worker = workers[slice % nr_of_draw_workers];
-        worker->addWorkBlocking(work, buff);
+        worker->addWorkBlocking(work);
         slice++;
     }
 }
 
 uint32_t previous_nr_of_digits = 0;
-SG::SquareDefinition fps_counter(drm_util::modeset_buf * buf, int64_t t_diff, int64_t time, SG::LineDrawer * worker) {
+void fps_counter(int64_t t_diff, szilv::LineDrawer2D * worker, szilv::modeset_buf * buf) {
+    // this isn't actually frames per second, but we rather see, that how many times could we iterate under 1 second
+    // if every iteration would take the same time as this actual round
     uint32_t fps = NANO_TO_SEC_CONV / t_diff;
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
@@ -113,29 +119,35 @@ SG::SquareDefinition fps_counter(drm_util::modeset_buf * buf, int64_t t_diff, in
         tmp /= 10;
     }
 
-    SG::SquareDefinition squareToFitEveryNumberIn = {0, 2, (int32_t)(buf->width), 20};
+    const int32_t fpsTopOffset = 2;
+    const int32_t digitWidth = 15;
+    const int32_t digitHeight = 18;
 
     uint32_t this_round_max = std::max(previous_nr_of_digits, nr_of_digits);
     for (uint32_t i = 0; i < this_round_max; i++) {
         char * digit = fps 
-            ? GM::FpsDigits::getDigit(fps % 10)
-            : (char*)GM::FpsDigits::blank;
-        int32_t left = buf->width - 15 * (i + 1) - 3 * i;
-        squareToFitEveryNumberIn.x1 = left;
-        SG::SquareDefinition square_slice = {
-            left, 2, 
-            left + 15, 20
+            ? szilv::FpsDigits::getDigit(fps % 10)
+            : (char*)szilv::FpsDigits::blank;
+        int32_t left = buf->width - digitWidth * (i + 1) - 3 * i;
+        szilv::SquareDefinition square_slice = {
+            left, fpsTopOffset, 
+            left + digitWidth - 1, fpsTopOffset + digitHeight - 1
         }; 
-        SG::DrawWork work = {
-            square_slice,
+        auto isInside = [digit, left](szilv::Vertex point) -> bool {
+            uint32_t x = (uint32_t)point.x;
+            uint32_t y = (uint32_t)point.y;
+            return (bool) digit[(y - 2) * digitWidth + (x - left)];
+        };
+        szilv::DrawWork work = {
             color_blue, color_black, 
-            SG::Digit, (void*)digit
+            (void*)digit, isInside,
+            square_slice, buf->map,
+            buf->width, buf->height
         };
         worker->addWorkBlocking(work);
         fps /= 10; 
     }
     previous_nr_of_digits = this_round_max;
-    return squareToFitEveryNumberIn;
 }
 
 /**
@@ -170,18 +182,18 @@ int main(int argc, char **argv) {
 
     // initialize the drm device
     std::string drm_card_name = cxxOptsWrapper.getOptionString("dri-device");
-    drmUtil = new drm_util::DrmUtil(drm_card_name.c_str());
+    drmUtil = new szilv::DrmUtil(drm_card_name.c_str());
     int32_t response = drmUtil->initDrmDev();
     if (response) {
         return response;
     }
-    drm_util::modeset_buf * buf = &drmUtil->mdev->bufs[0];
+    szilv::modeset_buf * buf = &drmUtil->mdev->bufs[0];
 
     // initialize the MouseEventReader
     std::string input_device_name = cxxOptsWrapper.getOptionString("mouse-input-device");
     uint32_t max_x = (&drmUtil->mdev->bufs[0])->width;
     uint32_t max_y = (&drmUtil->mdev->bufs[0])->height;
-    mouse_event_reader = new LinuxMouseEvent::MouseEventReader(
+    mouse_event_reader = new szilv::MouseEventReader(
             input_device_name.c_str(),
             max_x, max_y);
     int32_t response2 = mouse_event_reader->openEventFile();
@@ -198,33 +210,33 @@ int main(int argc, char **argv) {
     double trg_height = trg_side * sin60;
 
     // current
-    GM::Triangle triangle = GM::Triangle(
+    szilv::Triangle2D triangle = szilv::Triangle2D(
                     { trg_offset_x + trg_side * cos60,      trg_offset_y,               0 },
                     { trg_offset_x,                         trg_offset_y + trg_height,  0 },
                     { trg_offset_x + trg_side,              trg_offset_y + trg_height,  0 }
                     );
-    GM::Triangle * new_triangle = &triangle;
+    szilv::Triangle2D * new_triangle = &triangle;
 
     // old
     uint32_t nr_of_triangle_buffers = double_buffering ? 2 : 1;
-    std::vector<GM::Triangle> old_triangles(nr_of_triangle_buffers, new GM::Triangle(
+    std::vector<szilv::Triangle2D> old_triangles(nr_of_triangle_buffers, new szilv::Triangle2D(
                 { trg_offset_x + trg_side * cos60,      trg_offset_y,               0 },
                 { trg_offset_x,                         trg_offset_y + trg_height,  0 },
                 { trg_offset_x + trg_side,              trg_offset_y + trg_height,  0 }
                 )
             );
-    GM::Triangle * old_triangle = nullptr;
+    szilv::Triangle2D * old_triangle = nullptr;
 
     uint32_t max_radius = new_triangle->getRadiusOfTheOuterCircle();
 
     // start worker threads
     for ( uint32_t i = 0; i < nr_of_draw_workers; i++) {
-        workers.push_back(new SG::LineDrawer(i, buf->width, buf->height));
+        workers.push_back(new szilv::LineDrawer2D(i, buf->width, buf->height));
     }
 
     int64_t prev_t = get_nanos();
     uint64_t counter = 0;
-    std::optional<SG::SquareDefinition> fps_updated = std::nullopt;
+    std::optional<szilv::SquareDefinition> fps_updated = std::nullopt;
     auto fps_draw_worker = workers[nr_of_draw_workers - 1];
     uint64_t previous_fps_changed_at = get_nanos();
     bool keep_fps_one_more_frame = true;
@@ -240,7 +252,7 @@ int main(int argc, char **argv) {
 
         // current mouse position
         auto mouse_position = mouse_event_reader->getMousePosition();
-        GM::Vertex new_center = {
+        szilv::Vertex new_center = {
             1.0 * std::min(std::max(mouse_position.x, max_radius), buf->width - max_radius),
             1.0 * std::min(std::max(mouse_position.y, max_radius), buf->height - max_radius),
             0
@@ -252,25 +264,16 @@ int main(int argc, char **argv) {
         // rotate the Triangle
         new_triangle->rotateAroundTheCenter(angle);
 
-        SG::SquareDefinition squareCoordinates = defineTheSquareContainingTheTriangles(new_triangle, old_triangle);
+        szilv::SquareDefinition squareCoordinates = defineTheSquareContainingTheTriangles(new_triangle, old_triangle);
         // draw the old triangle with black ink and the new with a custom color ink
-        distribute_triangle_draws(new_triangle, squareCoordinates, color_white, buf->map);
+        distribute_triangle_draws(new_triangle, squareCoordinates, color_white, buf);
 
         // update the old Triangle
         old_triangle->setPrimitive(new_triangle->getPrimitive());
 
         if (show_fps && previous_fps_changed_at < t - NANO_TO_SEC_CONV) {
-            fps_updated = std::optional<SG::SquareDefinition>{fps_counter(buf, t_diff, t, fps_draw_worker)};
+            fps_counter(t_diff, fps_draw_worker, buf);
             previous_fps_changed_at = t;
-        }
-
-        // the fps digits from draw workers' buffers into the DRM buffer
-        if (fps_updated.has_value()) {
-            fps_draw_worker->memCopySquareInto(fps_updated.value(), buf->map);
-            if (!keep_fps_one_more_frame) {
-                fps_updated = std::nullopt;
-                keep_fps_one_more_frame = true;
-            }
         }
 
         //

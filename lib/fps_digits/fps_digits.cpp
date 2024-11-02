@@ -1,6 +1,6 @@
-#include "fps_digits.h"
+#include "fps_digits.hpp"
 
-namespace GM {
+namespace szilv {
 	char * FpsDigits::getDigit(int nr) {
 		switch (nr % 10) {
 			case 0: return (char*)zero;

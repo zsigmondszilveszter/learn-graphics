@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-namespace GM {
+namespace szilv {
 
     typedef struct {
         double x;

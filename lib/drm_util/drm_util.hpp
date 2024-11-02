@@ -5,7 +5,7 @@
 #include <xf86drmMode.h>
 #include <cstdint>
 
-namespace drm_util {
+namespace szilv {
 
     typedef struct modeset_buf modeset_buf;
     struct modeset_buf {

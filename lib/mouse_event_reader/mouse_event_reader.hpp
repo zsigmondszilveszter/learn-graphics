@@ -5,7 +5,7 @@
 #include <thread>
 #include <semaphore.h>
 
-namespace LinuxMouseEvent {
+namespace szilv {
 
     typedef struct {
         uint32_t x;

@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib",
-  "command": "/usr/bin/c++  -I/home/szilveszter/prog/practice/learn-graphics/lib/base_geometry -O3 -DNDEBUG -o CMakeFiles/Triangle.dir/triangle.cpp.o -c /home/szilveszter/prog/practice/learn-graphics/lib/triangle/triangle.cpp",
-  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/triangle/triangle.cpp",
-  "output": "triangle/CMakeFiles/Triangle.dir/triangle.cpp.o"
-}
-]
