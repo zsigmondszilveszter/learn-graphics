@@ -3,7 +3,6 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
-#include <optional>
 
 #include <cxxopts_wrapper.hpp>
 #include <mouse_event_reader.hpp>
@@ -108,10 +107,7 @@ void distribute_triangle_draws(szilv::Triangle2D * tr, szilv::SquareDefinition s
 }
 
 uint32_t previous_nr_of_digits = 0;
-void fps_counter(int64_t t_diff, szilv::LineDrawer2D * worker, szilv::modeset_buf * buf) {
-    // this isn't actually frames per second, but we rather see, that how many times could we iterate under 1 second
-    // if every iteration would take the same time as this actual round
-    uint32_t fps = NANO_TO_SEC_CONV / t_diff;
+void fps_counter(uint32_t fps, szilv::LineDrawer2D * worker, szilv::modeset_buf * buf) {
     uint32_t nr_of_digits = 0;
     uint32_t tmp = fps;
     while (tmp) {
@@ -236,7 +232,9 @@ int main(int argc, char **argv) {
 
     int64_t prev_t = get_nanos();
     uint64_t counter = 0;
-    std::optional<szilv::SquareDefinition> fps_updated = std::nullopt;
+    uint64_t counter_fps = 0;
+    uint32_t fps = 0;
+    bool second_frame_after_fps_update = false;
     auto fps_draw_worker = workers[nr_of_draw_workers - 1];
     uint64_t previous_fps_changed_at = get_nanos();
     bool keep_fps_one_more_frame = true;
@@ -244,6 +242,7 @@ int main(int argc, char **argv) {
     while (keep_running) {
         int64_t t = get_nanos();
         int64_t t_diff = t - prev_t;
+        prev_t = t;
         double angle = (double)(t_diff) * 0.000000001;
 
         uint32_t buf_idx = double_buffering ? drmUtil->mdev->front_buf ^ 1 : 0;
@@ -265,19 +264,20 @@ int main(int argc, char **argv) {
         new_triangle->rotateAroundTheCenter(angle);
 
         szilv::SquareDefinition squareCoordinates = defineTheSquareContainingTheTriangles(new_triangle, old_triangle);
-        // draw the old triangle with black ink and the new with a custom color ink
         distribute_triangle_draws(new_triangle, squareCoordinates, color_white, buf);
 
         // update the old Triangle
         old_triangle->setPrimitive(new_triangle->getPrimitive());
 
-        if (show_fps && previous_fps_changed_at < t - NANO_TO_SEC_CONV) {
-            fps_counter(t_diff, fps_draw_worker, buf);
-            previous_fps_changed_at = t;
+        if (show_fps && (previous_fps_changed_at < t - NANO_TO_SEC_CONV || second_frame_after_fps_update)) {
+            if (!second_frame_after_fps_update) {
+                fps = counter - counter_fps;
+                counter_fps = counter;
+                previous_fps_changed_at = t;
+            }
+            fps_counter(fps, fps_draw_worker, buf);
+            second_frame_after_fps_update = !second_frame_after_fps_update;
         }
-
-        //
-        prev_t = t;
 
         if (double_buffering) {
             // swap buffers
