@@ -12,11 +12,11 @@ add_executable(draw_triangle_with_drm_mouse_input
 target_compile_features(draw_triangle_with_drm_mouse_input PRIVATE cxx_std_17)
 
 
-add_subdirectory(../lib/cxxopts_wrapper cxxopts_wrapper)
-target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE CxxOptsWrapper)
+add_subdirectory(../../cpp_libraries/cli_args_szilv cli_args_szilv)
+target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE CliArgsSzilv)
 
 #
-add_subdirectory(../lib/mouse_event_reader  mouse_event_reader)
+add_subdirectory(../../cpp_libraries/mouse_event_reader  mouse_event_reader)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE MouseEventReader)
 
 #

@@ -2,12 +2,12 @@
 #include <csignal>
 #include <chrono>
 
-#include <cxxopts.hpp>
-#include <mouse_event_reader.hpp>
+#include "cli_args_szilv.hpp"
+#include "mouse_event_reader.hpp"
 
 
 bool keep_running = true;
-LinuxMouseEvent::MouseEventReader * mouse_event_reader;
+szcl::MouseEventReader * mouse_event_reader;
 
 /**
  *
@@ -35,22 +35,26 @@ void sig_handler(int signo) {
  */
 int main(int argc, char **argv) {
     // argument parser
-    cxxopts::Options options("Linux Mouse Event Reader", "A Linux Mouse event reader example by Szilveszter Zsigmond.");
-    options.add_options()
-        ("mouse-input-device", "Mouse input device path. ls -alh /dev/input/by-id", cxxopts::value<std::string>()->default_value("/dev/input/event7"))
-        ("h,help", "Prints this help message.");
-        ;
-    auto arguments = options.parse(argc, argv);
-    if (arguments.count("help")) {
-        std::cout << options.help() << std::endl;
+    szcl::CliArgsSzilv cliArgs("Linux Mouse Event Reader", "A Linux Mouse event reader example by Szilveszter Zsigmond.");
+
+    try {
+        cliArgs.addOptionString("m,mouse-input-device", "Mouse input device path. ls -alh /dev/input/by-id");
+        cliArgs.addOptionHelp("h,help", "Prints this help message.");
+        cliArgs.parseArguments(argc, argv);
+    } catch (szcl::CliArgsSzilvException& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return -1;
+    }
+    if (cliArgs.isHelp()) {
+        std::cout << cliArgs.getHelpDisplay() << std::endl;
         return 0;
     }
 
     // registar signal handler
     signal(SIGINT, sig_handler);
 
-    std::string input_device = arguments["mouse-input-device"].as<std::string>();
-    mouse_event_reader = new LinuxMouseEvent::MouseEventReader(input_device.c_str());
+    std::string input_device = cliArgs.getOptionString("mouse-input-device");
+    mouse_event_reader = new szcl::MouseEventReader(input_device.c_str(), 1024, 768, 512, 384);
     int32_t ret = mouse_event_reader->openEventFile();
     if (ret) {
         exit(ret);

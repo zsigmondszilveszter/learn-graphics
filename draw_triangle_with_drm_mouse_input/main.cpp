@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 
-#include <cxxopts_wrapper.hpp>
+#include "cli_args_szilv.hpp"
 #include <mouse_event_reader.hpp>
 #include <drm_util.hpp>
 #include "base_geometry.hpp"
@@ -132,7 +132,7 @@ void fps_counter(uint32_t fps, szilv::LineDrawer2D * worker, szilv::modeset_buf 
         auto isInside = [digit, left](szilv::Vertex point) -> bool {
             uint32_t x = (uint32_t)point.x;
             uint32_t y = (uint32_t)point.y;
-            return (bool) digit[(y - 2) * digitWidth + (x - left)];
+            return (bool) digit[(y - fpsTopOffset) * digitWidth + (x - left)];
         };
         szilv::DrawWork work = {
             color_blue, color_black, 
@@ -151,33 +151,39 @@ void fps_counter(uint32_t fps, szilv::LineDrawer2D * worker, szilv::modeset_buf 
  */
 int main(int argc, char **argv) {
     // argument parser
-    tl::CxxOptsWrapper cxxOptsWrapper("draw_triangle_with_drom_mouse_input", "This program draws a Triangle using Linux DRM library "
+    szcl::CliArgsSzilv cliArgs("draw_triangle_with_drom_mouse_input", "This program draws a Triangle using Linux DRM library "
             "and moves it by using mouse events. It can't run under a windowing system like X11/Wayland as it directly opens and writes " 
             "to the given DRI device which is not accessible under X11.\nAuthor Szilveszter Zsigmond.");
-    cxxOptsWrapper.addOptionString("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", "/dev/dri/card0");
-    cxxOptsWrapper.addOptionString("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"","/dev/input/event7");
-    cxxOptsWrapper.addOptionInteger("s,triangle-side-size", "The size of the triangle side. The default is 400.");
-    cxxOptsWrapper.addOptionInteger("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.");
-    cxxOptsWrapper.addOptionInteger("buffer-slice", "The size of buffer slice we are pushing to one draw worker once. Default is 10.");
-    cxxOptsWrapper.addOptionBoolean("double-buffering", "Use double buffer from the DRM library");
-    cxxOptsWrapper.addOptionBoolean("show-fps", "Show custom built FPS counter in the upper right corner");
-    cxxOptsWrapper.addOptionHelp("Prints this help message.");
-    cxxOptsWrapper.parseArguments(argc, argv);
-    if (cxxOptsWrapper.count("help")) {
-        std::cout << cxxOptsWrapper.getHelp() << std::endl;
+
+    try {
+        cliArgs.addOptionString("dri-device", "The dri device path. List devices with \"ls -alh /dev/dri/card*\".", "/dev/dri/card0");
+        cliArgs.addOptionString("mouse-input-device", "Mouse input device path. List mouse event devices with \"ls -alh /dev/input/by-id\"","/dev/input/event7");
+        cliArgs.addOptionInteger("s,triangle-side-size", "The size of the triangle side.", 400);
+        cliArgs.addOptionInteger("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.", std::max(2U, tl::Tools::nr_of_cpus()));
+        cliArgs.addOptionInteger("buffer-slice", "The size of buffer slice we are pushing to one draw worker once.", 10);
+        cliArgs.addOptionBoolean("double-buffering", "Use double buffer from the DRM library", false);
+        cliArgs.addOptionBoolean("show-fps", "Show custom built FPS counter in the upper right corner", false);
+        cliArgs.addOptionHelp("h,help", "Prints this help message.");
+        cliArgs.parseArguments(argc, argv);
+    } catch (szcl::CliArgsSzilvException& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return -1;
+    }
+    if (cliArgs.isHelp()) {
+        std::cout << cliArgs.getHelpDisplay() << std::endl;
         return 0;
     }
 
     // registar signal handler
     signal(SIGINT, sig_handler);
 
-    show_fps = cxxOptsWrapper.count("show-fps");
-    nr_of_draw_workers = cxxOptsWrapper.count("w") ? cxxOptsWrapper.getOptionInteger("w") : std::max(2U, tl::Tools::nr_of_cpus());
-    double_buffering = cxxOptsWrapper.count("double-buffering");
-    buffer_slice = cxxOptsWrapper.count("bl") ? cxxOptsWrapper.getOptionInteger("bl") : buffer_slice;
+    show_fps = cliArgs.has("show-fps") && cliArgs.getOptionBoolean("show-fps");
+    nr_of_draw_workers = cliArgs.has("w") ? cliArgs.getOptionInteger("w") : std::max(2U, tl::Tools::nr_of_cpus());
+    double_buffering = cliArgs.has("double-buffering") && cliArgs.getOptionBoolean("double-buffering");
+    buffer_slice = cliArgs.has("buffer-slice") ? cliArgs.getOptionInteger("buffer-slice") : buffer_slice;
 
     // initialize the drm device
-    std::string drm_card_name = cxxOptsWrapper.getOptionString("dri-device");
+    std::string drm_card_name = cliArgs.getOptionString("dri-device");
     drmUtil = new szilv::DrmUtil(drm_card_name.c_str());
     int32_t response = drmUtil->initDrmDev();
     if (response) {
@@ -186,7 +192,7 @@ int main(int argc, char **argv) {
     szilv::modeset_buf * buf = &drmUtil->mdev->bufs[0];
 
     // initialize the MouseEventReader
-    std::string input_device_name = cxxOptsWrapper.getOptionString("mouse-input-device");
+    std::string input_device_name = cliArgs.getOptionString("mouse-input-device");
     uint32_t max_x = (&drmUtil->mdev->bufs[0])->width;
     uint32_t max_y = (&drmUtil->mdev->bufs[0])->height;
     mouse_event_reader = new szilv::MouseEventReader(
@@ -198,7 +204,7 @@ int main(int argc, char **argv) {
     }
 
     // initial position and orientation of the triangle
-    const uint32_t trg_side = cxxOptsWrapper.count("s") ? cxxOptsWrapper.getOptionInteger("s") : 400;
+    const uint32_t trg_side = cliArgs.has("s") ? cliArgs.getOptionInteger("s") : 400;
     double trg_offset_x = 0;
     double trg_offset_y = 0;
     const double sin60 = sin(60 * M_PI / 180);

@@ -1,2 +1,4 @@
 build
+build_windows_x86_64
+build_macos_aarch64
 release
