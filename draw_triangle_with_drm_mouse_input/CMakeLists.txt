@@ -16,7 +16,7 @@ add_subdirectory(../../cpp_libraries/cli_args_szilv cli_args_szilv)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE CliArgsSzilv)
 
 #
-add_subdirectory(../../cpp_libraries/mouse_event_reader  mouse_event_reader)
+add_subdirectory(../../cpp_libraries/linux_mouse_event_reader  mouse_event_reader)
 target_link_libraries(draw_triangle_with_drm_mouse_input PRIVATE MouseEventReader)
 
 #

@@ -29,7 +29,7 @@ bool show_fps = false;
 bool double_buffering = false;
 uint32_t nr_of_draw_workers = 2U; // the last fallback
 uint32_t buffer_slice = 10;
-szilv::MouseEventReader * mouse_event_reader;
+szcl::MouseEventReader * mouse_event_reader;
 szilv::DrmUtil * drmUtil;
 std::vector<szilv::LineDrawer2D *> workers;
 
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     std::string input_device_name = cliArgs.getOptionString("mouse-input-device");
     uint32_t max_x = (&drmUtil->mdev->bufs[0])->width;
     uint32_t max_y = (&drmUtil->mdev->bufs[0])->height;
-    mouse_event_reader = new szilv::MouseEventReader(
+    mouse_event_reader = new szcl::MouseEventReader(
             input_device_name.c_str(),
             max_x, max_y);
     int32_t response2 = mouse_event_reader->openEventFile();
