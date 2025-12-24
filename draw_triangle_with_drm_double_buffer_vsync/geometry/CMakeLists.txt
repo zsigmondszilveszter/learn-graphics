@@ -1,2 +1,0 @@
-add_subdirectory(base_geometry)
-add_subdirectory(triangle)
