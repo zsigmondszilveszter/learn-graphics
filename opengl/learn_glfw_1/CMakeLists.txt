@@ -24,7 +24,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(glfw-3.3.8)
+add_subdirectory(glfw-3.4)
 target_link_libraries(learn_glfw_1 glfw)
 
 
