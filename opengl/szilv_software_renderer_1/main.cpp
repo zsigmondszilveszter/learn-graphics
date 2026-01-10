@@ -33,7 +33,39 @@ int32_t main(int32_t argc, char ** args) {
     SDL_Renderer *ren = SDL_CreateRenderer(window, NULL);
 
     int32_t running = 1;
+    bool draw = true;
     while (running) {
+        if (draw) {
+            SDL_GetWindowSize(window, &w, &h);
+            std::clog << "Window size w=" << w << ", h=" << h << std::endl;
+
+            SDL_Texture *tex = SDL_CreateTexture(
+                    ren,
+                    SDL_PIXELFORMAT_XRGB8888,
+                    SDL_TEXTUREACCESS_STREAMING,
+                    w, h
+                    );
+
+            void *pixels;
+            int32_t pitch;
+
+            SDL_LockTexture(tex, NULL, &pixels, &pitch);
+
+            uint32_t *fb = (uint32_t *)pixels;
+
+            // draw something
+            draw_square(fb, off_x+square_dimension*0, off_y, square_dimension, color_blue,  w);
+            draw_square(fb, off_x+square_dimension*1, off_y, square_dimension, color_green, w);
+            draw_square(fb, off_x+square_dimension*2, off_y, square_dimension, color_yellow,w);
+            draw_square(fb, off_x+square_dimension*3, off_y, square_dimension, color_red,   w);
+
+            SDL_UnlockTexture(tex);
+
+            SDL_RenderTexture(ren, tex, NULL, NULL);
+            SDL_RenderPresent(ren);
+
+            draw = false;
+        }
         SDL_Event e;
         while (SDL_WaitEventTimeout(&e, 100)) {
             switch (e.type) {
@@ -45,35 +77,7 @@ int32_t main(int32_t argc, char ** args) {
                     
                 case SDL_EVENT_WINDOW_RESIZED: 
                     {
-                        SDL_GetWindowSize(window, &w, &h);
-                        std::clog << "Window size w=" << w << ", h=" << h << std::endl;
-
-                        SDL_Texture *tex = SDL_CreateTexture(
-                                ren,
-                                SDL_PIXELFORMAT_XRGB8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                w, h
-                                );
-
-                        void *pixels;
-                        int32_t pitch;
-
-                        SDL_LockTexture(tex, NULL, &pixels, &pitch);
-
-                        uint32_t *fb = (uint32_t *)pixels;
-
-                        // draw something
-                        draw_square(fb, off_x+square_dimension*0, off_y, square_dimension, color_blue,  w);
-                        draw_square(fb, off_x+square_dimension*1, off_y, square_dimension, color_green, w);
-                        draw_square(fb, off_x+square_dimension*2, off_y, square_dimension, color_yellow,w);
-                        draw_square(fb, off_x+square_dimension*3, off_y, square_dimension, color_red,   w);
-
-                        SDL_UnlockTexture(tex);
-
-                        SDL_RenderTexture(ren, tex, NULL, NULL);
-                        SDL_RenderPresent(ren);
-                        // clear
-                        SDL_RenderClear(ren);
+                        draw = true;
                     }
                     break;
             }
