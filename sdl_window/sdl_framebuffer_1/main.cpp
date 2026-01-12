@@ -30,7 +30,7 @@ int32_t main(int32_t argc, char ** args) {
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
 
-    SDL_Renderer *ren = SDL_CreateRenderer(window, NULL);
+    SDL_Renderer *ren = SDL_CreateRenderer(window, "software");
 
     int32_t running = 1;
     bool draw = true;
