@@ -16,9 +16,9 @@ int32_t main(int32_t argc, char ** args) {
     uint32_t off_x = 100, off_y = 50;
     uint32_t square_dimension = 70;
     uint32_t color_blue = 0x176BEF; // google blue
-    uint32_t color_green = 0xFF3E30; // google green
+    uint32_t color_green = 0xFF3E30; // google red
     uint32_t color_yellow = 0xF7B529; // google yellow
-    uint32_t color_red = 0x179C52; // google red
+    uint32_t color_red = 0x179C52; // google green
 
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -73,19 +73,20 @@ int32_t main(int32_t argc, char ** args) {
             draw = false;
         }
 
-        SDL_WaitEventTimeout(&e, 100);
-        switch (e.type) {
-            case SDL_EVENT_QUIT: 
-                {
-                    running = 0;
-                }
-                break;
+        while(SDL_PollEvent(&e)) {
+            switch (e.type) {
+                case SDL_EVENT_QUIT: 
+                    {
+                        running = 0;
+                    }
+                    break;
 
-            case SDL_EVENT_WINDOW_RESIZED: 
-                {
-                    draw = true;
-                }
-                break;
+                case SDL_EVENT_WINDOW_RESIZED: 
+                    {
+                        draw = true;
+                    }
+                    break;
+            }
         }
     }
 
