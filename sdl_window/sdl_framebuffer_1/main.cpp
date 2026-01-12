@@ -35,12 +35,17 @@ int32_t main(int32_t argc, char ** args) {
     int32_t running = 1;
     bool draw = true;
     SDL_Event e;
+    SDL_Texture *tex;
     while (running) {
         if (draw) {
             SDL_GetWindowSize(window, &w, &h);
             std::clog << "Window size w=" << w << ", h=" << h << std::endl;
 
-            SDL_Texture *tex = SDL_CreateTexture(
+            // destroy previous texture 
+            if (tex != NULL) 
+                SDL_DestroyTexture(tex);
+            // create a new one
+            tex = SDL_CreateTexture(
                     ren,
                     SDL_PIXELFORMAT_XRGB8888,
                     SDL_TEXTUREACCESS_STREAMING,
