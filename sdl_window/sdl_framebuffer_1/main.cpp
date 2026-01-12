@@ -34,6 +34,7 @@ int32_t main(int32_t argc, char ** args) {
 
     int32_t running = 1;
     bool draw = true;
+    SDL_Event e;
     while (running) {
         if (draw) {
             SDL_GetWindowSize(window, &w, &h);
@@ -66,21 +67,20 @@ int32_t main(int32_t argc, char ** args) {
 
             draw = false;
         }
-        SDL_Event e;
-        while (SDL_WaitEventTimeout(&e, 100)) {
-            switch (e.type) {
-                case SDL_EVENT_QUIT: 
-                    {
-                        running = 0;
-                    }
-                    break;
-                    
-                case SDL_EVENT_WINDOW_RESIZED: 
-                    {
-                        draw = true;
-                    }
-                    break;
-            }
+
+        SDL_WaitEventTimeout(&e, 100);
+        switch (e.type) {
+            case SDL_EVENT_QUIT: 
+                {
+                    running = 0;
+                }
+                break;
+
+            case SDL_EVENT_WINDOW_RESIZED: 
+                {
+                    draw = true;
+                }
+                break;
         }
     }
 
