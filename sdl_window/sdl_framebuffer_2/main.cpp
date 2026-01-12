@@ -8,14 +8,14 @@
 
 
 static uint64_t loop_count = 0;
-static std::chrono::time_point prev_time = std::chrono::steady_clock::now();
+static auto prev_time = std::chrono::steady_clock::now();
 static uint64_t prev_loop_count = 0;
 
 /**
  *
  */
 uint32_t fps_counter_callback(void* userdata, SDL_TimerID timerID, uint32_t interval) {
-    std::chrono::time_point now = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
 
     auto elapsed = now - prev_time;
     uint64_t frames = loop_count - prev_loop_count;
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window *window = SDL_CreateWindow(
-        "Szilv software renderer 1 with SDL3",
+        "Szilv software renderer 2 with SDL3",
         800, 600, // hint only
         SDL_WINDOW_RESIZABLE
     );
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
         SDL_LockTexture(tex, NULL, &pixels, &pitch);
         uint32_t *fb = (uint32_t *)pixels;
 
-        std::chrono::time_point now = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
         double t = now.time_since_epoch().count() / 1000000000.0;
         double f = 2.0; // freq
 
