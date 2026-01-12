@@ -11,7 +11,7 @@ add_executable(sdl_framebuffer_1
     )
 
 add_library(sdl_framebuffer_1_compiler_flags INTERFACE)
-target_compile_features(sdl_framebuffer_1_compiler_flags INTERFACE cxx_std_20)
+target_compile_features(sdl_framebuffer_1_compiler_flags INTERFACE cxx_std_17)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
