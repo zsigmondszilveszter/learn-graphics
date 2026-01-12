@@ -102,12 +102,7 @@ int main(int argc, char *argv[]) {
                     | (uint64_t)(127 * sin(t * f) + 128) << 16
                     | (uint64_t)(127 * sin(t * f + 2 * M_PI / 3) + 128) << 8
                     | (uint64_t)(127 * sin(t * f + 4 * M_PI / 3) + 128);
-
-        for (uint32_t x = 0; x < w; x++) {
-            for (uint32_t y = 0; y< h; y++ ) {
-                fb[x + y * w] = color;
-            }
-        }
+        SDL_memset4(pixels, color, w * h);
 
         SDL_UnlockTexture(tex);
         SDL_RenderTexture(ren, tex, NULL, NULL);
