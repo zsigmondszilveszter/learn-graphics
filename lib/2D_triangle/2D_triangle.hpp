@@ -26,10 +26,10 @@ namespace szilv {
             virtual void translateToNewCenter(Vertex new_centroid);
             virtual void rotateAroundTheCenter(double angle);
 
+            static double distance(Vertex p1, Vertex p2);
         private:
             TrianglePrimitive tr;
 
-            virtual double distance(Vertex p1, Vertex p2);
     };
 }
 
