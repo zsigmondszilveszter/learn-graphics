@@ -1,8 +1,6 @@
 #include <iostream>
 
 #include "2D_line_drawer.hpp"
-#include <cstdlib> 
-#include <cstring>
 
 namespace szilv {
 
@@ -73,7 +71,6 @@ namespace szilv {
                 work_queue.pop();
 
                 int32_t buf_offset;
-                //szilv::Triangle2D * tr = (szilv::Triangle2D *) w.obj;
                 for (int32_t y = w.squareDefinition.y1; y <= w.squareDefinition.y2; y++) {
                     for (int32_t x = w.squareDefinition.x1; x <= w.squareDefinition.x2; x++) {
                         szilv::Vertex point = {(double)x, (double)y, 0.0};
@@ -83,22 +80,6 @@ namespace szilv {
                             : w.bg_color;
                     }
                 }
-                    //case Digit:
-                    //    {
-                    //        char * digit = (char *) w.obj;
-                    //        uint32_t width = w.squareDefinition.x2 - w.squareDefinition.x1;
-                    //        uint32_t height = w.squareDefinition.y2 - w.squareDefinition.y1;
-                    //        for (int32_t y = 0; y < height; y++) {
-                    //            for (int32_t x = 0; x < width; x++) {
-                    //                buf_offset = (w.squareDefinition.y1 + y) * buff.width + (w.squareDefinition.x1 + x);
-                    //                w.target_buff[buf_offset] = digit[y * width + x] 
-                    //                    ? w.color 
-                    //                    : w.bg_color;
-                    //            }
-                    //        }
-                    //    }
-                    //    break;
-                //}
             }
             sem_post(&sem_work_queue);
             sem_post(&sem_block_main_thread);

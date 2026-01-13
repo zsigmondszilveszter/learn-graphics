@@ -34,5 +34,5 @@ target_link_libraries(sdl_framebuffer_triangle PRIVATE BaseGeometry)
 add_subdirectory(../../lib/2D_triangle  2D_triangle)
 target_link_libraries(sdl_framebuffer_triangle PRIVATE 2D_triangle)
 
-add_subdirectory(../../lib/2D_line_drawer  2D_line_drawer)
+add_subdirectory(../../lib/2D_line_drawer_cross  2D_line_drawer)
 target_link_libraries(sdl_framebuffer_triangle PRIVATE 2D_line_drawer)
