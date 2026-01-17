@@ -60,10 +60,11 @@ void calculateTheTrianglePositionAndSize(
         uint32_t window_width,
         uint32_t window_height,
         uint32_t desired_side_length) {
-
+    window_width--;
+    window_height--;
     uint32_t smaller_side = std::min(window_width, window_height);
     uint32_t constrainted_radius = smaller_side / 2;
-    uint32_t desired_radius = (double)desired_side_length / sqrt(3);
+    uint32_t desired_radius = (uint32_t)((double)desired_side_length / sqrt(3));
     uint32_t new_radius = std::min(constrainted_radius, desired_radius);
     uint32_t new_side_length = new_radius * sqrt(3);
     szilv::TrianglePrimitive trg_primitive = triangle->getPrimitive();
@@ -190,6 +191,7 @@ int main(int argc, char *argv[]) {
                                 );
                         // check if the triangle sides should be recalculated
                         calculateTheTrianglePositionAndSize(new_triangle, w, h, trg_side);
+                        calculateTheTrianglePositionAndSize(old_triangle, w, h, trg_side);
                     }
                     break;
             }
@@ -234,7 +236,6 @@ int main(int argc, char *argv[]) {
 
         // update the old Triangle
         old_triangle->setPrimitive(new_triangle->getPrimitive());
-
 
         // sync worker threads
         for ( uint32_t i = 0; i < nr_of_draw_workers; i++) {
