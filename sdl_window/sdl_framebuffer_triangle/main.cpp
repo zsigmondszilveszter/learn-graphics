@@ -235,6 +235,12 @@ int main(int argc, char *argv[]) {
         // update the old Triangle
         old_triangle->setPrimitive(new_triangle->getPrimitive());
 
+
+        // sync worker threads
+        for ( uint32_t i = 0; i < nr_of_draw_workers; i++) {
+            workers[i]->blockMainThreadUntilTheQueueIsNotEmpty();
+        }
+
         SDL_UnlockTexture(tex);
         SDL_RenderTexture(ren, tex, NULL, NULL);
         SDL_RenderPresent(ren);
