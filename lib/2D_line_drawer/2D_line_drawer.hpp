@@ -3,7 +3,8 @@
 
 #include <queue>
 #include <thread>
-#include <semaphore.h>
+#include <mutex>
+#include <condition_variable>
 #include <functional>
 #include "base_geometry.hpp"
 
@@ -15,7 +16,7 @@ namespace szilv {
         int32_t x2, y2;
     } SquareDefinition;
 
-    typedef struct {
+    struct DrawWorkStruct {
         uint32_t color;
         uint32_t bg_color;
         void * obj;
@@ -24,7 +25,30 @@ namespace szilv {
         int32_t * target_buff = nullptr;
         uint32_t buff_width;
         uint32_t buff_height;
-    } DrawWork;
+    };
+    typedef DrawWorkStruct DrawWork;
+
+    class Semaphore {
+    public:
+        Semaphore(int count_ = 0) : count(count_) {}
+
+        void notify() {
+            std::unique_lock<std::mutex> lock(mtx);
+            count++;
+            cv.notify_one();
+        }
+
+        void wait() {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this]() { return count > 0; });
+            count--;
+        }
+
+    private:
+        std::mutex mtx;
+        std::condition_variable cv;
+        int count;
+    };
 
     class LineDrawer2D {
         public:
@@ -44,9 +68,9 @@ namespace szilv {
 
             std::queue<DrawWork> work_queue;
             std::thread thd;
-            sem_t sem_work_queue{1};
-            sem_t sem_block_this_thread{0};
-            sem_t sem_block_main_thread{1};
+            Semaphore sem_work_queue;
+            Semaphore sem_block_this_thread;
+            Semaphore sem_block_main_thread;
     };
 }
 

@@ -4,13 +4,10 @@
 
 namespace szilv {
 
-    LineDrawer2D::LineDrawer2D(uint32_t id, uint32_t x, uint32_t y) {
+    LineDrawer2D::LineDrawer2D(uint32_t id, uint32_t x, uint32_t y) 
+        : sem_work_queue(1), sem_block_this_thread(0), sem_block_main_thread(1) {
         this->id = id;
-        // init semaphores
-        sem_init(&sem_work_queue, 0, 1);
-        sem_init(&sem_block_this_thread, 0, 0);
-        sem_init(&sem_block_main_thread, 0, 1);
-
+        
         // start worker thread
         this->thd = std::thread([this] { threadWorker(); } );
     }
@@ -19,13 +16,9 @@ namespace szilv {
         std::clog << "Thread " << id << " getting destroyed" << std::endl;
         this->keep_running = false;
 
-        sem_post(&sem_work_queue);
-        sem_post(&sem_block_this_thread);
-        sem_post(&sem_block_main_thread);
-
-        sem_destroy(&sem_work_queue);
-        sem_destroy(&sem_block_this_thread);
-        sem_destroy(&sem_block_main_thread);
+        sem_work_queue.notify();
+        sem_block_this_thread.notify();
+        sem_block_main_thread.notify();
 
         this->thd.join();
 
@@ -33,39 +26,39 @@ namespace szilv {
     }
 
     void LineDrawer2D::addWorkBlocking(DrawWork work) {
-        sem_wait(&sem_work_queue);
+        sem_work_queue.wait();
         work_queue.push(work);
-        sem_post(&sem_work_queue);
+        sem_work_queue.notify();
 
         // unblock this thread
-        sem_post(&sem_block_this_thread);
+        sem_block_this_thread.notify();
         // block main thread to access this thread's resources
-        sem_wait(&sem_block_main_thread);
+        sem_block_main_thread.wait();
     }
 
     void LineDrawer2D::blockMainThreadUntilTheQueueIsNotEmpty() {
-        sem_wait(&sem_block_main_thread);
-        sem_post(&sem_block_main_thread);
+        sem_block_main_thread.wait();
+        sem_block_main_thread.notify();
     }
 
     uint32_t LineDrawer2D::getWorkQueueSize() {
-        sem_wait(&sem_work_queue);
+        sem_work_queue.wait();
         uint32_t size = work_queue.size();
-        sem_post(&sem_work_queue);
+        sem_work_queue.notify();
         return size;
     }
 
     bool LineDrawer2D::isWorkQueueEmpty() {
-        sem_wait(&sem_work_queue);
+        sem_work_queue.wait();
         bool empty = work_queue.empty();
-        sem_post(&sem_work_queue);
+        sem_work_queue.notify();
         return empty;
     }
 
     void LineDrawer2D::threadWorker() {
         while (keep_running) {
-            sem_wait(&sem_block_this_thread);
-            sem_wait(&sem_work_queue);
+            sem_block_this_thread.wait();
+            sem_work_queue.wait();
             while (!work_queue.empty()) {
                 DrawWork w = work_queue.front();
                 work_queue.pop();
@@ -81,8 +74,8 @@ namespace szilv {
                     }
                 }
             }
-            sem_post(&sem_work_queue);
-            sem_post(&sem_block_main_thread);
+            sem_work_queue.notify();
+            sem_block_main_thread.notify();
         }
     }
 }

@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/szilveszter/prog/practice/learn-graphics/lib/2D_line_drawer",
-  "command": "/usr/bin/c++  -I/home/szilveszter/prog/practice/learn-graphics/lib/base_geometry -I/home/szilveszter/prog/practice/learn-graphics/lib/2D_triangle -O3 -DNDEBUG -o CMakeFiles/2D_line_drawer.dir/2D_line_drawer.cpp.o -c /home/szilveszter/prog/practice/learn-graphics/lib/2D_line_drawer/2D_line_drawer.cpp",
-  "file": "/home/szilveszter/prog/practice/learn-graphics/lib/2D_line_drawer/2D_line_drawer.cpp",
-  "output": "2D_line_drawer/CMakeFiles/2D_line_drawer.dir/2D_line_drawer.cpp.o"
-}
-]
