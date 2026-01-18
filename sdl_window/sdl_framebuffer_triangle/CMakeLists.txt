@@ -18,13 +18,17 @@ add_executable(sdl_framebuffer_triangle
     main.cpp
     )
 
-target_compile_features(sdl_framebuffer_triangle PRIVATE cxx_std_17)
+# tell CMake to embed the shared libraries path relative to the executable
+set_target_properties(sdl_framebuffer_triangle PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN"
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS true)
+target_compile_features(sdl_framebuffer_triangle PRIVATE cxx_std_17)
 
 # Link to the actual SDL3 library.
 target_link_libraries(sdl_framebuffer_triangle PRIVATE SDL3::SDL3)
-
 add_subdirectory($ENV{HOME}/prog/practice/cpp_libraries/cli_args_szilv cli_args_szilv)
 target_link_libraries(sdl_framebuffer_triangle PRIVATE CliArgsSzilv)
 
