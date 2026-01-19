@@ -88,14 +88,16 @@ void calculateTheTrianglePositionAndSize(
  *
  */
 int main(int argc, char *argv[]) {
-    uint32_t default_cpus = std::max(2U, std::thread::hardware_concurrency());
+    const uint32_t default_triangle_side_size = 400;
+    const uint32_t default_cpus = std::max(2U, std::thread::hardware_concurrency());
+    const uint32_t default_slices = default_triangle_side_size / default_cpus;
     // argument parser
     szcl::CliArgsSzilv cliArgs("sdl_framebuffer_triangle", "This program draws a Triangle using SDL3 for window creation and software rendering. "
             "Theoretically it supports all the platforms whatever SDL3 supports.\nAuthor Szilveszter Zsigmond.");
     try {
-        cliArgs.addOptionInteger("s,triangle-side-size", "The size of the triangle side.", 400);
+        cliArgs.addOptionInteger("s,triangle-side-size", "The size of the triangle side.", default_triangle_side_size);
         cliArgs.addOptionInteger("w,parallel-draw-workers", "The number of parallel draw workers. Default is the number of available CPUs.", default_cpus);
-        cliArgs.addOptionInteger("buffer-slice", "The size of buffer slice we are pushing to one draw worker once.", 10);
+        cliArgs.addOptionInteger("buffer-slice", "The size of buffer slice we are pushing to one draw worker once.", default_slices);
         cliArgs.addOptionHelp("h,help", "Prints this help message.");
         cliArgs.parseArguments(argc, argv);
     } catch (szcl::CliArgsSzilvException& e) {
@@ -222,12 +224,15 @@ int main(int argc, char *argv[]) {
                 return new_triangle->pointInTriangle(point);
             };
 
+            // Calculate the 'stride' (virtual width)
+            uint32_t stride = pitch / 4;
+
             szilv::DrawWork work = {
                 0x4285f4,      // triangle color
                 0x0,    // background color
                 (void*)new_triangle, isInside,
                 square_slice, fb,
-                (uint32_t)w, (uint32_t)h
+                stride, (uint32_t)h
             };
             auto worker = workers[slice % nr_of_draw_workers];
             worker->addWorkBlocking(work);
