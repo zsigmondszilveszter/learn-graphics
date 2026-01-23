@@ -11,11 +11,6 @@
 
 namespace szilv {
 
-    typedef struct {
-        int32_t x1, y1;
-        int32_t x2, y2;
-    } SquareDefinition;
-
     struct DrawWorkStruct {
         uint32_t color;
         uint32_t bg_color;

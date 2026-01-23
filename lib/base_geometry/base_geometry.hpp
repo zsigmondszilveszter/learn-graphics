@@ -10,6 +10,11 @@ namespace szilv {
         double y;
         double z;
     } Vertex;
+    
+    typedef struct {
+        int32_t x1, y1;
+        int32_t x2, y2;
+    } SquareDefinition;
 
     class BaseGeometry {
         public:
