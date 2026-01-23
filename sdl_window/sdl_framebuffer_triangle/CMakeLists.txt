@@ -8,13 +8,6 @@ project(sdl_framebuffer_triangle
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-# SDL3 build as static or dynamic library
-set(SDL_STATIC OFF CACHE BOOL "" FORCE)
-set(SDL_SHARED ON CACHE BOOL "" FORCE) # by default
-
-# This assumes the SDL source is available in the SDL directory
-add_subdirectory(SDL EXCLUDE_FROM_ALL)
-
 #compile commmands 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
@@ -35,10 +28,14 @@ elseif(UNIX)
     )
 endif()
 
-
 target_compile_features(sdl_framebuffer_triangle PRIVATE cxx_std_17)
 
-# Link to libraries.
+
+# ---- SDL3 ----
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL_SHARED ON CACHE BOOL "" FORCE) # by default
+# This assumes the SDL source is available in the SDL directory
+add_subdirectory(SDL EXCLUDE_FROM_ALL)
 target_link_libraries(sdl_framebuffer_triangle PRIVATE SDL3::SDL3)
 
 add_subdirectory(../../../cpp_libraries/cli_args_szilv cli_args_szilv)

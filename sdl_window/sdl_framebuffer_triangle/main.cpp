@@ -214,19 +214,18 @@ int main(int argc, char *argv[]) {
         new_triangle->rotateAroundTheCenter(angle);
 
         szilv::SquareDefinition squareCoordinates = defineTheSquareContainingTheTriangles(new_triangle, old_triangle);
+        auto isInside = [new_triangle](szilv::Vertex point) -> bool {
+            return new_triangle->pointInTriangle(point);
+        };
+
         // distribute slices of the big 2D square, the triangle is inside, between worker threads
         uint32_t slice = 0;
+        uint32_t stride = pitch / 4;
         for (int32_t y=squareCoordinates.y1; y <= squareCoordinates.y2; y+=buffer_slice) {
             szilv::SquareDefinition square_slice = {
                 squareCoordinates.x1, y, 
                 squareCoordinates.x2, std::min(y + (int32_t)buffer_slice, squareCoordinates.y2)
             }; 
-            auto isInside = [new_triangle](szilv::Vertex point) -> bool {
-                return new_triangle->pointInTriangle(point);
-            };
-
-            // Calculate the 'stride' (virtual width)
-            uint32_t stride = pitch / 4;
 
             szilv::DrawWork work = {
                 0x4285f4,      // triangle color
