@@ -18,6 +18,19 @@ add_executable(sdl_framebuffer_2
     main.cpp
     )
 
+# tell CMake to embed the shared libraries path relative to the executable
+if(APPLE)
+    set_target_properties(sdl_framebuffer_2 PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "@executable_path"
+    )
+elseif(UNIX)
+    set_target_properties(sdl_framebuffer_2 PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "$ORIGIN"
+    )
+endif()
+
 add_library(sdl_framebuffer_2_compiler_flags INTERFACE)
 target_compile_features(sdl_framebuffer_2 PRIVATE cxx_std_17)
 

@@ -22,7 +22,8 @@ namespace szilv {
         void * obj;
         std::function<bool(szilv::Vertex)> isInside;
         SquareDefinition squareDefinition;
-        int32_t * target_buff = nullptr;
+        uint8_t * target_buff = nullptr;
+        uint32_t pitch;
         uint32_t buff_width;
         uint32_t buff_height;
     };

@@ -63,14 +63,16 @@ namespace szilv {
                 DrawWork w = work_queue.front();
                 work_queue.pop();
 
-                int32_t buf_offset;
                 for (int32_t y = w.squareDefinition.y1; y <= w.squareDefinition.y2; y++) {
+                    // Find the start of the current row
+                    int32_t* row = reinterpret_cast<int32_t*>(w.target_buff + (y * w.pitch));
+
                     for (int32_t x = w.squareDefinition.x1; x <= w.squareDefinition.x2; x++) {
                         szilv::Vertex point = {(double)x, (double)y, 0.0};
-                        buf_offset = y * w.buff_width + x;
-                        w.target_buff[buf_offset] = w.isInside(point) 
+                        row[x] = w.isInside(point) 
                             ? w.color 
                             : w.bg_color;
+
                     }
                 }
             }

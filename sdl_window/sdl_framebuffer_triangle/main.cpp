@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     const uint32_t default_cpus = std::max(2U, std::thread::hardware_concurrency());
     const uint32_t default_slices = default_triangle_side_size / default_cpus;
     // argument parser
-    szcl::CliArgsSzilv cliArgs("sdl_framebuffer_triangle", "This program draws a Triangle using SDL3 for window creation and software rendering. "
+    szcl::CliArgsSzilv cliArgs("sdl_framebuffer_triangle", "This program draws and rotates a Triangle using SDL3 for window creation and software rendering. "
             "Theoretically it supports all the platforms whatever SDL3 supports.\nAuthor Szilveszter Zsigmond.");
     try {
         cliArgs.addOptionInteger("s,triangle-side-size", "The size of the triangle side.", default_triangle_side_size);
@@ -207,7 +207,8 @@ int main(int argc, char *argv[]) {
         void *pixels;
         int32_t pitch;
         SDL_LockTexture(tex, NULL, &pixels, &pitch);
-        int32_t *fb = (int32_t *)pixels;
+        // Treat the buffer as bytes for the row calculation
+        uint8_t* base_ptr = static_cast<uint8_t*>(pixels);
 
         // rotate the Triangle
         new_triangle->rotateAroundTheCenter(angle);
@@ -231,7 +232,9 @@ int main(int argc, char *argv[]) {
                 0x4285f4,      // triangle color
                 0x0,    // background color
                 (void*)new_triangle, isInside,
-                square_slice, fb,
+                square_slice,
+                base_ptr,
+                (uint32_t)pitch,
                 stride, (uint32_t)h
             };
             auto worker = workers[slice % nr_of_draw_workers];
